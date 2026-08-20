@@ -53,6 +53,21 @@ input[type=text]{width:100%;padding:6px 9px;background:var(--panel-2);color:var(
 .tool button:hover,.filebtn:hover{border-color:var(--brass);color:var(--brass)}
 .tool button.primary{background:var(--brass);color:var(--lacquer);border-color:var(--brass);font-weight:600}
 .note{font-size:11.5px;color:var(--ink-3);margin-top:10px}
+
+/* ═══ 工作台布局：≥1100px 整页不滚，各栏独立滚动 ═══ */
+@media(min-width:1100px){
+  html,body{height:100%;overflow:hidden}
+  body{display:flex;flex-direction:column}
+  header{flex:none}
+  main{flex:1;min-height:0;max-width:none;width:100%;padding:14px 16px;gap:14px;
+       align-items:stretch}
+  main>*{min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:6px;scrollbar-width:thin}
+  main>*::-webkit-scrollbar{width:7px}
+  main>*::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}
+  footer{flex:none;margin:0;max-width:none;padding:6px 16px;font-size:10.5px;line-height:1.45;
+         border-top:1px solid var(--edge);background:var(--panel);
+         max-height:2.9em;overflow-y:auto}
+}
 footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;font-size:11.5px;color:var(--ink-3)}
 nav.site{display:flex;gap:2px;margin-left:auto;align-items:center;flex-wrap:wrap}
 nav.site a{font-size:11.5px;letter-spacing:.1em;color:#9A8F78;text-decoration:none;

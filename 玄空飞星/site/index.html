@@ -1,7 +1,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>玄空飞星工作台</title>
-<meta name="description" content="可验证的玄空飞星排盘：下卦替卦、八宅游年、户型缺角、三维炁流场。算法公开，1229 条一致性测试，三方独立交叉校验。">
+<meta name="description" content="可验证的东方术数工具：玄空飞星、三维炁流、立极定向、八字命书与合盘。算法公开，1443 条一致性测试，五个独立实现交叉校验。">
 <style>
 :root{
   --ground:#E7E1D2; --panel:#F3EEE2; --panel-2:#EAE4D5; --edge:#CFC5AC;
@@ -26,8 +26,9 @@ body{margin:0;background:var(--ground);color:var(--ink);
 .serif{font-family:"Songti SC","STSong","Source Han Serif SC",SimSun,serif}
 a{color:var(--brass)}
 
-header{background:var(--lacquer);color:var(--lacquer-ink);border-bottom:2px solid var(--brass)}
-.bar{max-width:1000px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+header{background:var(--lacquer);color:var(--lacquer-ink);border-bottom:2px solid var(--brass);
+  position:relative;z-index:5}
+.bar{max-width:1100px;margin:0 auto;padding:13px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .bar .mark{font-family:"Songti SC","STSong",SimSun,serif;font-size:19px;letter-spacing:.22em;color:var(--brass)}
 nav.site{display:flex;gap:2px;margin-left:auto;flex-wrap:wrap}
 nav.site a{font-size:11.5px;letter-spacing:.1em;color:#9A8F78;text-decoration:none;
@@ -35,35 +36,49 @@ nav.site a{font-size:11.5px;letter-spacing:.1em;color:#9A8F78;text-decoration:no
 nav.site a:hover{color:var(--brass)}
 nav.site a[aria-current="page"]{color:var(--lacquer);background:var(--brass);font-weight:600}
 
-.hero{background:var(--lacquer);color:var(--lacquer-ink);padding:56px 24px 64px}
-.hero .in{max-width:1000px;margin:0 auto}
-.hero .eyebrow{font-size:11.5px;letter-spacing:.28em;color:var(--brass);text-transform:uppercase}
-.hero h1{font-family:"Songti SC","STSong",SimSun,serif;font-size:clamp(30px,5.5vw,46px);
-  margin:14px 0 10px;letter-spacing:.08em;font-weight:600;line-height:1.25;text-wrap:balance}
-.hero p{margin:0;max-width:56ch;color:#B3A992;font-size:15.5px}
-.hero .cta{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap}
-.hero .cta a{display:inline-block;padding:9px 20px;border-radius:2px;text-decoration:none;
-  font-size:13.5px;font-weight:600;letter-spacing:.04em}
-.hero .cta .p{background:var(--brass);color:var(--lacquer)}
-.hero .cta .s{border:1px solid #4A4136;color:#B3A992}
+/* ═══ 星图 ═══ */
+.sky{position:relative;background:var(--lacquer);overflow:hidden;height:clamp(470px,74vh,700px)}
+#stars{position:absolute;inset:0;display:block}
+#links{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.skyin{position:absolute;inset:0}
+.node{position:absolute;transform:translate(-50%,-50%);text-align:center;
+  text-decoration:none;color:inherit;cursor:pointer;transition:transform .25s ease}
+.node:focus-visible{outline:2px solid var(--brass);outline-offset:6px;border-radius:6px}
+.node .orb{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;margin:0 auto;
+  background:radial-gradient(circle at 38% 32%, #241F18 0%, #100E0B 74%);
+  border:1px solid rgba(201,162,74,.42);
+  box-shadow:0 0 0 6px rgba(201,162,74,.05), 0 6px 22px -8px #000;
+  transition:border-color .25s, box-shadow .25s}
+.node .glyph{font-family:"Songti SC","STSong",SimSun,serif;font-size:26px;
+  color:#D8BC77;letter-spacing:.04em;line-height:1}
+.node .cap{margin-top:9px;font-size:12px;letter-spacing:.14em;color:#9A8F78;
+  font-family:"Songti SC","STSong",SimSun,serif;white-space:nowrap;display:block}
+.node .st{display:block;font-size:9.5px;letter-spacing:.1em;color:#6B6252;margin-top:1px}
+.node:hover,.node:focus-visible{transform:translate(-50%,-50%) scale(1.09)}
+.node:hover .orb,.node:focus-visible .orb{border-color:var(--brass);
+  box-shadow:0 0 0 8px rgba(201,162,74,.11), 0 0 30px -4px rgba(201,162,74,.5)}
+.node:hover .cap{color:#D8BC77}
+.node.soon{cursor:default;opacity:.45}
+.node.soon:hover{transform:translate(-50%,-50%)}
+.node.soon:hover .orb{border-color:rgba(201,162,74,.42);
+  box-shadow:0 0 0 6px rgba(201,162,74,.05), 0 6px 22px -8px #000}
+
+.tip{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);
+  width:min(660px,90vw);text-align:center;pointer-events:none;
+  background:rgba(16,14,11,.88);border:1px solid rgba(201,162,74,.28);border-radius:3px;
+  padding:11px 18px;color:#B3A992;font-size:13px;line-height:1.6;
+  opacity:0;transition:opacity .2s}
+.tip.on{opacity:1}
+.tip b{color:#D8BC77;font-family:"Songti SC","STSong",SimSun,serif;letter-spacing:.1em}
+.skyhint{position:absolute;top:16px;left:50%;transform:translateX(-50%);
+  font-size:11px;letter-spacing:.22em;color:#5E564A;pointer-events:none}
 
 main{max-width:1000px;margin:0 auto;padding:44px 24px 80px}
 section{margin:0 0 52px}
 h2{font-family:"Songti SC","STSong",SimSun,serif;font-size:21px;letter-spacing:.06em;
   margin:0 0 6px;padding-bottom:8px;border-bottom:1px solid var(--edge)}
 .sub{color:var(--ink-3);font-size:13px;margin:0 0 18px}
-
-.tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
-.tool{background:var(--panel);border:1px solid var(--edge);border-radius:3px;padding:18px;
-  display:flex;flex-direction:column;text-decoration:none;color:inherit}
-.tool:hover{border-color:var(--brass)}
-.tool .g{font-family:"Songti SC","STSong",SimSun,serif;font-size:26px;color:var(--brass);
-  letter-spacing:.1em;line-height:1}
-.tool h3{margin:10px 0 6px;font-size:16px;letter-spacing:.04em;
-  font-family:"Songti SC","STSong",SimSun,serif}
-.tool p{margin:0;font-size:13px;color:var(--ink-2);flex:1}
-.tool .go{margin-top:12px;font-size:12px;color:var(--brass);font-weight:600}
-
 .claim{background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--jade);
   border-radius:3px;padding:18px 20px}
 .tablewrap{overflow-x:auto;margin:14px 0}
@@ -72,113 +87,66 @@ th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--edge);verti
 th{color:var(--ink-3);font-weight:600;font-size:11.5px;letter-spacing:.08em;border-bottom:1.5px solid var(--edge)}
 td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
 .ok{color:var(--jade);font-weight:600}
-
 .bounds{background:var(--panel);border:1px solid var(--edge);border-left:3px solid var(--brass);
   border-radius:3px;padding:16px 20px}
 .bounds ul{margin:8px 0 0;padding-left:20px}
 .bounds li{margin:5px 0;font-size:13.5px;color:var(--ink-2)}
-
 footer{border-top:1px solid var(--edge);padding-top:18px;font-size:12px;color:var(--ink-3)}
 code{background:var(--panel-2);padding:1px 5px;border-radius:2px;font-size:.9em}
+@media(prefers-reduced-motion:reduce){.node{transition:none}}
+@media(max-width:640px){
+  .sky{height:auto;padding:26px 12px 20px}
+  #stars,#links{display:none}
+  .skyin{position:static;display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:20px 10px}
+  .node{position:static!important;transform:none!important;left:auto!important;top:auto!important}
+  .node:hover,.node:focus-visible{transform:none!important}
+  .tip{position:static;transform:none;opacity:1;margin-top:20px;width:auto}
+  .skyhint{position:static;transform:none;display:block;text-align:center;margin-bottom:18px}
+}
 </style>
 
 <header><div class="bar">
   <span class="mark">玄空</span>
   <nav class="site">
-    <a href="./" aria-current="page">门户</a>
-    <a href="paipan.html">排盘</a>
-    <a href="qiflow.html">炁流场</a>
-    <a href="waihuan.html">立极尺</a><a href="bazi.html">命书</a><a href="hepan.html">合盘</a><a href="research.html">竞品拆解</a>
+    <a href="./" aria-current="page">门户</a><a href="paipan.html">排盘</a>
+    <a href="qiflow.html">炁流场</a><a href="waihuan.html">立极尺</a>
+    <a href="bazi.html">命书</a><a href="hepan.html">合盘</a>
+    <a href="research.html">竞品拆解</a>
   </nav>
 </div></header>
 
-<div class="hero"><div class="in">
-  <div class="eyebrow">Xuan Kong Flying Star Workbench</div>
-  <h1 class="serif">算得对的玄空飞星，<br>比算得好看更重要。</h1>
-  <p>术数工具的尴尬在于：用户没有能力检验它算得对不对。
-     所以这套工具把算法、基准数据和全部一致性测试都摆出来 ——
-     你可以自己复算，也可以拿去对别家的盘。</p>
-  <div class="cta">
-    <a class="p" href="paipan.html">开始排盘 →</a>
-    <a class="s" href="qiflow.html">看三维炁流场</a>
-  </div>
-</div></div>
+<div class="sky">
+  <canvas id="stars"></canvas>
+  <svg id="links" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+  <div class="skyin" id="skyin"></div>
+  <div class="skyhint">选一颗星，进入对应工具</div>
+  <div class="tip" id="tip">算得对的东方术数 —— 算法公开、基准可复算、边界写在明处。</div>
+</div>
 
 <main>
 
 <section>
-  <h2>六个工具</h2>
-  <p class="sub">各自独立可用；坐向与户型在各页之间自动同步。</p>
-  <div class="tools">
-    <a class="tool" href="paipan.html">
-      <span class="g">盘</span>
-      <h3>玄空飞星排盘</h3>
-      <p>拖罗盘定坐向，排山星向星（下卦＋替卦起星），叠八宅四吉四凶。
-         可上传户型图自动描轮廓，算缺角并交叉判断影响。附万年历与命卦。</p>
-      <span class="go">进入 →</span>
-    </a>
-    <a class="tool" href="qiflow.html">
-      <span class="g">炁</span>
-      <h3>三维炁流场</h3>
-      <p>粒子自炁口注入、绕墙流动，按测地距离衰减算各宫炁强度，
-         识别缺角／被隔断／炁弱三种情况，并与玄空旺位、八宅吉方三方交叉。</p>
-      <span class="go">进入 →</span>
-    </a>
-    <a class="tool" href="waihuan.html">
-      <span class="g">极</span>
-      <h3>外环境立极尺</h3>
-      <p>对着地图或卫星截图量出房屋朝向轴，直接读出向首度数与二十四山。
-         没有实体罗盘、或人不在现场时用这个定向，读数可锁定回排盘页。</p>
-      <span class="go">进入 →</span>
-    </a>
-    <a class="tool" href="bazi.html">
-      <span class="g">命</span>
-      <h3>八字命书</h3>
-      <p>四柱、十神、藏干、五行加权与十步大运。历法内核与排盘页同源，
-         含真太阳时校正；节气用天文算法实解而非查表，四柱已与四个独立实现比对一致。</p>
-      <span class="go">进入 →</span>
-    </a>
-    <a class="tool" href="hepan.html">
-      <span class="g">合</span>
-      <h3>八字合盘</h3>
-      <p>两造四柱逐柱比对：五合、六合、三合、六冲、六害、相刑，
-         日主互视十神与五行互补。只罗列结构关系，不给「配不配」的结论。</p>
-      <span class="go">进入 →</span>
-    </a>
-    <a class="tool" href="research.html">
-      <span class="g">析</span>
-      <h3>竞品技术拆解</h3>
-      <p>对 xunq.chat 的架构分析：技术栈、三个核心功能的实现方式、
-         它的术数引擎软肋，以及我们的切入路线。</p>
-      <span class="go">阅读 →</span>
-    </a>
-  </div>
-</section>
-
-<section>
   <h2>凭什么说算得对</h2>
-  <p class="sub">排盘内核先用 Python 写通并逐格校验，再移植为页面 JS。以下每一项都可复算。</p>
+  <p class="sub">每一项都可复算：算法规格、基准数据与全部测试都在仓库里。</p>
   <div class="tablewrap"><table>
     <tr><th>校验项</th><th>参照</th><th class="n">结果</th></tr>
-    <tr><td>下卦 · 九运 209.5° 丑山未向<br><span style="color:var(--ink-3);font-size:12px">运／山／向／流年 四张九宫</span></td>
-        <td>某抖音排盘 App 实测</td><td class="n ok">36 / 36 全同</td></tr>
-    <tr><td>替卦 · 辛山乙向兼戌辰</td><td>妙訣堂排盘程式</td><td class="n ok">18 / 18 全同</td></tr>
-    <tr><td>替卦 · 子山午向兼壬丙<br><span style="color:var(--ink-3);font-size:12px">专测廉贞无替／文曲照替边界</span></td>
-        <td>妙訣堂排盘程式</td><td class="n ok">18 / 18 全同</td></tr>
+    <tr><td>下卦 · 九运 209.5° 丑山未向</td><td>某抖音排盘 App</td><td class="n ok">36 / 36 全同</td></tr>
+    <tr><td>替卦 · 两例（含廉贞／文曲边界）</td><td>妙訣堂排盘程式</td><td class="n ok">各 18 / 18</td></tr>
     <tr><td>四柱 + 流年月日时紫白</td><td>xunq.chat</td><td class="n ok">8 项全同</td></tr>
-    <tr><td>八字四柱 + 大运干支序列<br><span style="color:var(--ink-3);font-size:12px">2000-05-20 14:30 乾造</span></td><td>xunq.chat 命书</td><td class="n ok">四柱 4/4 · 大运全同</td></tr>
-    <tr><td>真太阳时校正<br><span style="color:var(--ink-3);font-size:12px">乌鲁木齐 · 经度差与均时差</span></td><td>xunq.chat 命书</td><td class="n ok">校正后四柱全同</td></tr>
-    <tr><td>十二长生 · 星运/自坐<br><span style="color:var(--ink-3);font-size:12px">及甲申运十年流年十神</span></td><td>xunq.chat 命书</td><td class="n ok">10 例 + 10/10 全同</td></tr>
-    <tr><td>八宅游年（坎／乾／艮宅）</td><td>经典游年歌</td><td class="n ok">各 8 / 8 全同</td></tr>
-    <tr><td>八运旺山旺向六局</td><td>公开流传名单</td><td class="n ok">完全吻合</td></tr>
-    <tr><td>户型九宫裁剪面积守恒</td><td>解析几何</td><td class="n ok">精确守恒</td></tr>
+    <tr><td>八字四柱 + 大运干支序列</td><td>xunq.chat 命书</td><td class="n ok">四柱 4/4 · 大运全同</td></tr>
+    <tr><td>真太阳时校正（乌鲁木齐）</td><td>xunq.chat 命书</td><td class="n ok">校正后四柱全同</td></tr>
+    <tr><td>十二长生 · 星运／自坐</td><td>xunq.chat 公开数据</td><td class="n ok">10 例全同</td></tr>
+    <tr><td>八宅游年（坎／乾／艮宅）</td><td>经典游年歌</td><td class="n ok">各 8 / 8</td></tr>
+    <tr><td>神煞推导 vs 传世表</td><td>四神煞 × 四局</td><td class="n ok">16 / 16</td></tr>
+    <tr><td>合盘关系公式反推</td><td>传世表</td><td class="n ok">不多不少</td></tr>
     <tr><td colspan="2"><b>一致性测试总计</b></td><td class="n ok">1443 / 1443</td></tr>
   </table></div>
   <div class="claim">
-    <b>顺带查出参考资料的 5 处错误。</b>
-    我们没有直接采信现成表格，而是逐项独立推导后再比对，结果发现某流行风水 skill 的数据有多处硬错：
-    二十四山阴阳（与地支阴阳混淆）、顺逆判定表、九运坐向格局、流年中宫表整体偏移一年、八宅游年表。
-    这些勘误连同完整推导都写进了<a href="paipan.html">算法规格文档</a>。
+    <b>大量「要背的表」其实是算术。</b>
+    神煞是三合局阳干十二长生的产物（桃花＝沐浴、将星＝帝旺、华盖＝墓、驿马＝长生之冲）；
+    六合＝序号和 ≡1、六害＝≡7、六冲＝差 6、五合＝差 5、三合＝同余 mod 4。
+    我们据此推导再与传世表<b>双向</b>比对 —— 漏判会少组、误判会多组，两种错都跑不掉。
+    过程中也查出某流行风水资料的 <b>5 处硬错</b>，勘误与推导都写进了算法规格。
   </div>
 </section>
 
@@ -186,22 +154,105 @@ code{background:var(--panel-2);padding:1px 5px;border-radius:2px;font-size:.9em}
   <h2>诚实的边界</h2>
   <p class="sub">能算的和不能算的，分清楚比多算几项更重要。</p>
   <div class="bounds"><ul>
-    <li><b>流派分歧不替你裁决</b> —— 下卦／替卦分界（±4.5°）、井字法与中心放射法、五入中阴阳，
-        不同流派结论不同。工具两派都给并如实标注分歧，不合成一个「综合评分」糊弄过去。</li>
-    <li><b>炁流场是示意模型</b> —— 模拟的是空间通达性与滞留区，
-        <b>不是真实空气动力学，也不是古法定量</b>。传统堪舆并无「炁速」数值，那些滑块只是可视化调节。</li>
-    <li><b>缺角阈值 60% 是经验值</b>，不是古法定数；立极点取面积形心（凹形户型与外接框中心有偏差）。</li>
-    <li><b>时刻按北京时间（UTC+8）解算</b>，异地使用需先换算，否则时柱会错。</li>
-    <li><b>未作磁偏角修正</b> —— 坐向若取自地图方位角需自行校正，实测请以实体罗盘为准。</li>
-    <li><b>户型图识别仅作预标注</b> —— 光栅转矢量不可能百分百可靠，识别后请核对并手动修正。</li>
+    <li><b>流派分歧不替你裁决</b> —— 下卦／替卦分界、井字法与中心放射法、五入中阴阳，
+        不同流派结论不同。两派都给并标注分歧，不合成一个「综合评分」糊弄过去。</li>
+    <li><b>合盘不给「配不配」</b> —— 只罗列结构关系。单凭干支断缘分深浅并不可靠。</li>
+    <li><b>炁流场是示意模型</b> —— 模拟空间通达性与滞留区，不是真实空气动力学，也不是古法定量。</li>
+    <li><b>八字强弱只按加权计数粗判</b> —— 未计月令、通根、刑冲合会。</li>
+    <li><b>时刻按北京时间</b>，异地出生请开真太阳时校正；地图为真北，与实体罗盘的磁北差一个磁偏角。</li>
+    <li><b>户型图识别仅作预标注</b> —— 光栅转矢量不可能百分百可靠，请核对后手动修正。</li>
   </ul></div>
 </section>
 
 <footer>
   <p>开源于 <a href="https://github.com/richardhu8/FengShui-Energy-Field">richardhu8/FengShui-Energy-Field</a> ·
      MIT 许可 · 算法规格、基准数据与全部测试均在仓库中，欢迎复算与指错。</p>
-  <p>本站用于传统文化学习与参考，不替代专业勘察，也不构成医疗、投资或法律建议。
+  <p>本站用于传统文化学习与参考，不替代专业勘察，也不构成医疗、投资、法律或人生决策建议。
      AI 解读功能需自建后端（见仓库 <code>api/</code>），未部署时自动禁用。</p>
 </footer>
 
 </main>
+
+<script>
+const NODES=[
+  {g:"盘",n:"排盘",s:"XUAN KONG",x:26,y:31,href:"paipan.html",
+   d:"<b>玄空飞星排盘</b>　拖罗盘或手机实测定坐向，排山星向星（下卦＋替卦），叠八宅四吉四凶，上传户型图算缺角。"},
+  {g:"炁",n:"炁流场",s:"QI FIELD",x:47,y:19,href:"qiflow.html",
+   d:"<b>三维炁流场</b>　粒子自炁口注入绕墙流动，按测地距离衰减算各宫炁强度，与玄空旺位、八宅吉方三方交叉。"},
+  {g:"极",n:"立极尺",s:"SITE AXIS",x:14,y:59,href:"waihuan.html",
+   d:"<b>外环境立极尺</b>　对着地图或卫星截图量房屋朝向轴，直读向首度数与二十四山，可锁定回排盘页。"},
+  {g:"命",n:"命书",s:"BAZI",x:73,y:35,href:"bazi.html",
+   d:"<b>八字命书</b>　四柱、十神、藏干、五行加权、十步大运与流年细盘，含纳音神煞旬空与真太阳时校正。"},
+  {g:"合",n:"合盘",s:"SYNASTRY",x:87,y:62,href:"hepan.html",
+   d:"<b>八字合盘</b>　两造四柱逐柱比对五合、六合、三合、六冲、六害、相刑，日主互视十神与五行互补。只列关系，不下结论。"},
+  {g:"析",n:"竞品拆解",s:"TEARDOWN",x:53,y:72,href:"research.html",
+   d:"<b>竞品技术拆解</b>　对 xunq.chat 的架构分析：技术栈、核心功能实现方式、术数引擎软肋与我们的切入路线。"},
+  {g:"卜",n:"卜筮",s:"NOT YET",x:33,y:85,href:null,
+   d:"<b>卜筮</b>　六爻与梅花易数 —— <b>尚未开始</b>。列在这里是提醒：没做的就说没做。"},
+];
+const LINKS=[[0,1],[0,2],[1,3],[3,4],[0,5],[5,6]];
+const skyin=document.getElementById("skyin"), tip=document.getElementById("tip");
+const DEFAULT_TIP=tip.innerHTML;
+
+NODES.forEach(nd=>{
+  const el=document.createElement(nd.href?"a":"div");
+  if(nd.href)el.href=nd.href; else el.setAttribute("aria-disabled","true");
+  el.className="node"+(nd.href?"":" soon");
+  el.style.left=nd.x+"%"; el.style.top=nd.y+"%";
+  if(nd.href)el.tabIndex=0;
+  el.innerHTML='<span class="orb"><span class="glyph">'+nd.g+'</span></span>'+
+    '<span class="cap">'+nd.n+'<span class="st">'+nd.s+'</span></span>';
+  const show=()=>{tip.innerHTML=nd.d;tip.classList.add("on");};
+  const hide=()=>{tip.innerHTML=DEFAULT_TIP;};
+  el.addEventListener("mouseenter",show);
+  el.addEventListener("focus",show);
+  el.addEventListener("mouseleave",hide);
+  el.addEventListener("blur",hide);
+  skyin.appendChild(el);
+});
+tip.classList.add("on");
+
+const svg=document.getElementById("links");
+LINKS.forEach(function(p){
+  const l=document.createElementNS("http://www.w3.org/2000/svg","line");
+  l.setAttribute("x1",NODES[p[0]].x); l.setAttribute("y1",NODES[p[0]].y);
+  l.setAttribute("x2",NODES[p[1]].x); l.setAttribute("y2",NODES[p[1]].y);
+  l.setAttribute("stroke","rgba(201,162,74,.20)");
+  l.setAttribute("stroke-width","1");
+  l.setAttribute("vector-effect","non-scaling-stroke");
+  svg.appendChild(l);
+});
+
+const cv=document.getElementById("stars"), cx=cv.getContext("2d");
+let W=0,H=0,pts=[];
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+function resize(){
+  const r=cv.parentElement.getBoundingClientRect();
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  W=r.width;H=r.height;
+  cv.width=Math.max(1,W*dpr);cv.height=Math.max(1,H*dpr);
+  cv.style.width=W+"px";cv.style.height=H+"px";
+  cx.setTransform(dpr,0,0,dpr,0,0);
+  const n=Math.round(W*H/9000);
+  pts=[];
+  for(let i=0;i<n;i++)pts.push({
+    x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.25+.25,
+    a:Math.random()*.5+.12,tw:Math.random()*.9+.25,ph:Math.random()*6.283,
+    vx:(Math.random()-.5)*.045,vy:(Math.random()-.5)*.045});
+}
+function frame(ts){
+  const t=ts/1000;
+  cx.clearRect(0,0,W,H);
+  for(let i=0;i<pts.length;i++){
+    const p=pts[i];
+    if(!reduce){p.x+=p.vx;p.y+=p.vy;
+      if(p.x<0)p.x+=W; if(p.x>W)p.x-=W; if(p.y<0)p.y+=H; if(p.y>H)p.y-=H;}
+    const a=reduce?p.a:p.a*(.62+.38*Math.sin(t*p.tw+p.ph));
+    cx.beginPath();cx.arc(p.x,p.y,p.r,0,6.283);
+    cx.fillStyle="rgba(217,201,160,"+a.toFixed(3)+")";cx.fill();
+  }
+  requestAnimationFrame(frame);
+}
+window.addEventListener("resize",resize);
+resize(); requestAnimationFrame(frame);
+</script>
