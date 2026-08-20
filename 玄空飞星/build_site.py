@@ -19,6 +19,7 @@ PAGES = [
     ("外环境立极尺.html",  "waihuan.html",  "立极尺"),
     ("八字命书.html",      "bazi.html",     "命书"),
     ("合盘.html",          "hepan.html",    "合盘"),
+    ("六爻纳甲.html",      "liuyao.html",   "六爻"),
     ("寻炁-技术拆解.html", "research.html", "竞品拆解"),
 ]
 RENAME = {src: dst for src, dst, _ in PAGES}
@@ -77,6 +78,26 @@ def build(text, current):
     return put_nav(ensure_nav_css(text), nav_html(current))
 
 
+def sync_portal(check):
+    """门户 index.html 是手写的，不由源文件生成 —— 但导航仍须同一来源。
+    否则新增一页时门户会漏掉入口（六爻上线时就漏过）。"""
+    f = SITE / "index.html"
+    if not f.exists():
+        return []
+    raw = f.read_text(encoding="utf-8")
+    fixed = put_nav(ensure_nav_css(raw), nav_html("index.html"))
+    # 门户自身高亮「门户」
+    fixed = fixed.replace('<nav class="site"><a href="./">门户</a>',
+                          '<nav class="site"><a href="./" aria-current="page">门户</a>')
+    if fixed == raw:
+        print("  = index.html（门户导航）")
+        return []
+    print(f"  {'≠' if check else '↻'} index.html（门户导航）")
+    if not check:
+        f.write_text(fixed, encoding="utf-8")
+    return ["index.html"]
+
+
 def main():
     check = "--check" in sys.argv
     drift = []
@@ -101,6 +122,7 @@ def main():
             print(f"  {'≠' if check else '↻'} {dst}" + ("（未同步）" if check else ""))
             if not check:
                 out.write_text(built, encoding="utf-8")
+    drift += sync_portal(check)
     if check and drift:
         print(f"\n❌ {len(drift)} 个发布副本与源文件不同步：{'、'.join(drift)}")
         print("   跑 python3 build_site.py 重新生成")

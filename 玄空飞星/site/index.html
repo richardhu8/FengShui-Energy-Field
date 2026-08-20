@@ -1,7 +1,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>玄空飞星工作台</title>
-<meta name="description" content="可验证的东方术数工具：玄空飞星、三维炁流、立极定向、八字命书与合盘。算法公开，1476 条一致性测试，五个独立实现交叉校验，天文项另比对公开年历。">
+<meta name="description" content="可验证的东方术数工具：玄空飞星、三维炁流、立极定向、八字命书、合盘与六爻纳甲。算法公开，两套基准共 2483 条一致性测试，五个独立实现交叉校验，天文项与卦序另比对传世表与公开年历。">
 <style>
 :root{
   --ground:#E7E1D2; --panel:#F3EEE2; --panel-2:#EAE4D5; --edge:#CFC5AC;
@@ -114,12 +114,7 @@ code{background:var(--panel-2);padding:1px 5px;border-radius:2px;font-size:.9em}
 
 <header><div class="bar">
   <span class="mark">玄空</span>
-  <nav class="site">
-    <a href="./" aria-current="page">门户</a><a href="paipan.html">排盘</a>
-    <a href="qiflow.html">炁流场</a><a href="waihuan.html">立极尺</a>
-    <a href="bazi.html">命书</a><a href="hepan.html">合盘</a>
-    <a href="research.html">竞品拆解</a>
-  </nav>
+  <nav class="site"><a href="./" aria-current="page">门户</a><a href="paipan.html">排盘</a><a href="qiflow.html">炁流场</a><a href="waihuan.html">立极尺</a><a href="bazi.html">命书</a><a href="hepan.html">合盘</a><a href="liuyao.html">六爻</a><a href="research.html">竞品拆解</a></nav>
 </div></header>
 
 <div class="sky">
@@ -154,6 +149,11 @@ code{background:var(--panel-2);padding:1px 5px;border-radius:2px;font-size:.9em}
     <tr><td>日出日落 · 二至昼长</td><td>公开日出日落表</td><td class="n ok">8 例偏差 &lt;2 分</td></tr>
     <tr><td>天时模块 网页 vs Python</td><td>逐位比对</td><td class="n ok">139 / 139</td></tr>
     <tr><td>月相图亮面占比 · 像素实测</td><td>光栅化测量</td><td class="n ok">10 相误差 &lt;0.4%</td></tr>
+    <tr><td>京房八宫六十四卦序推导</td><td>传世八宫卦序表</td><td class="n ok">64 / 64 不重不漏</td></tr>
+    <tr><td>纳甲干支 · 八卦内外六爻</td><td>传世纳甲表</td><td class="n ok">48 / 48 全同</td></tr>
+    <tr><td>旬空 · 六十甲子逐日</td><td>六甲空亡表</td><td class="n ok">60 / 60 全同</td></tr>
+    <tr><td>六爻装卦 网页 vs Python</td><td>SHA-256 逐字节</td><td class="n ok">1024 行摘要相同</td></tr>
+    <tr><td>铜钱四象分布 · 24 万次</td><td>理论 1/8·3/8·3/8·1/8</td><td class="n ok">χ²=3.51（临界 16.27）</td></tr>
     <tr><td colspan="2"><b>一致性测试总计</b></td><td class="n ok">1476 / 1476</td></tr>
   </table></div>
   <div class="claim">
@@ -233,10 +233,12 @@ const NODES=[
    d:"<b>八字合盘</b>　两造四柱逐柱比对五合、六合、三合、六冲、六害、相刑，日主互视十神与五行互补。只列关系，不下结论。"},
   {g:"析",n:"竞品拆解",s:"TEARDOWN",x:53,y:72,href:"research.html",
    d:"<b>竞品技术拆解</b>　对 xunq.chat 的架构分析：技术栈、核心功能实现方式、术数引擎软肋与我们的切入路线。"},
-  {g:"卜",n:"卜筮",s:"NOT YET",x:33,y:85,href:null,
-   d:"<b>卜筮</b>　六爻与梅花易数 —— <b>尚未开始</b>。列在这里是提醒：没做的就说没做。"},
+  {g:"爻",n:"六爻",s:"LIU YAO",x:33,y:85,href:"liuyao.html",
+   d:"<b>六爻纳甲</b>　三枚铜钱摇卦，装八宫世应、纳甲干支、六亲六神与伏神。"+
+     "卦序与纳甲全由规则推出，不抄传世表 —— 与京房八宫卦序逐格比对，1007 项全通过。"+
+     "<b>只装卦，不代你断卦</b>：取用神与旺衰属术家判断，流派分歧大。"},
 ];
-const LINKS=[[0,1],[0,2],[1,3],[3,4],[0,5],[5,6]];
+const LINKS=[[0,1],[0,2],[1,3],[3,4],[0,5],[5,6],[3,6]];
 const skyin=document.getElementById("skyin"), tip=document.getElementById("tip");
 const DEFAULT_TIP=tip.innerHTML;
 
