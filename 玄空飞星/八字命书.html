@@ -138,6 +138,13 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;font-size:11.5px;color
       <div class="dy" id="dy"></div>
       <div id="dyDetail" style="margin-top:12px"></div>
     </div>
+
+    <div class="card pad">
+      <h2>流年细盘</h2>
+      <p class="hint" id="lnHint"></p>
+      <div class="dy" id="ln"></div>
+      <div id="lnDetail" style="margin-top:12px"></div>
+    </div>
   </div>
 </main>
 
@@ -158,6 +165,15 @@ const WX="木火土金水", SX="鼠牛虎兔龙蛇马羊猴鸡狗猪";
 const CANG={子:"癸",丑:"己癸辛",寅:"甲丙戊",卯:"乙",辰:"戊乙癸",巳:"丙庚戊",
             午:"丁己",未:"己丁乙",申:"庚壬戊",酉:"辛",戌:"戊辛丁",亥:"壬甲"};
 const CW=[1.0,0.5,0.3];
+const STAGES=["长生","沐浴","冠带","临官","帝旺","衰","病","死","墓","绝","胎","养"];
+const CS_START={甲:"亥",丙:"寅",戊:"寅",庚:"巳",壬:"申",乙:"午",丁:"酉",己:"酉",辛:"子",癸:"卯"};
+const YANGG=new Set("甲丙戊庚壬");
+function changsheng(gan,zhi){
+  const st=ZHI.indexOf(CS_START[gan]), z=ZHI.indexOf(zhi);
+  const step=YANGG.has(gan)?(z-st):(st-z);
+  return STAGES[((step%12)+12)%12];
+}
+const yearGZ=y=>{const i=((y-4)%60+60)%60;return[GAN[i%10],ZHI[i%12]];};
 function shishen(d,o){
   const di=GAN.indexOf(d),oi=GAN.indexOf(o);
   const dw=GAN_WX[di],ow=GAN_WX[oi],same=GAN_YY[di]===GAN_YY[oi];
@@ -252,7 +268,7 @@ function trueSolar(y,m,d,h,lon){
 
 /* ═══ 渲染 ═══ */
 const $=id=>document.getElementById(id);
-let ST={male:true,sel:0,tst:false,lon:116.41};
+let ST={male:true,sel:0,lnSel:0,tst:false,lon:116.41};
 const wxCls=g=>"w"+GAN_WX[GAN.indexOf(g)];
 const zwCls=z=>"w"+ZHI_WX[z];
 
@@ -332,13 +348,43 @@ function render(){
     `<b><span class="${wxCls(s.gz[0])}">${s.gz[0]}</span><span class="${zwCls(s.gz[1])}">${s.gz[1]}</span></b>`+
     `<small>${s.from}–${s.from+9}岁</small><small>${s.year}起</small></div>`).join("");
   document.querySelectorAll('.dycell').forEach(c=>c.addEventListener("click",()=>{
-    ST.sel=+c.getAttribute("data-i");render();}));
+    ST.sel=+c.getAttribute("data-i");ST.lnSel=0;render();}));
+  // —— 流年细盘：所选大运的十个流年 ——
+  const sel=R.seq[ST.sel];
+  const birthY=y;
+  $("lnHint").innerHTML=`${sel.gz.join("")} 运（${sel.from}–${sel.from+9}岁）区间内的十个流年。`+
+    `<b>星运</b>＝日主 ${day} 在该年支的十二长生；<b>自坐</b>＝该年干在自身年支的十二长生。`;
+  const lnList=[];
+  for(let k=0;k<10;k++){
+    const yr=sel.year+k, gz=yearGZ(yr);
+    lnList.push({yr,gz,age:sel.from+k,
+      ss:shishen(day,gz[0]), xy:changsheng(day,gz[1]), zz:changsheng(gz[0],gz[1])});
+  }
+  if(ST.lnSel>=10)ST.lnSel=0;
+  $("ln").innerHTML=lnList.map((L,i)=>
+    `<div class="dycell" data-ln="${i}" aria-pressed="${i===ST.lnSel}">`+
+    `<b><span class="${wxCls(L.gz[0])}">${L.gz[0]}</span><span class="${zwCls(L.gz[1])}">${L.gz[1]}</span></b>`+
+    `<small>${L.yr} · ${L.age}岁</small><small>${L.ss}</small></div>`).join("");
+  document.querySelectorAll('[data-ln]').forEach(c=>c.addEventListener("click",()=>{
+    ST.lnSel=+c.getAttribute("data-ln");render();}));
+  const L=lnList[ST.lnSel];
+  $("lnDetail").innerHTML=
+    `<div class="kv"><span><b class="serif" style="font-size:16px">${L.gz.join("")}</b> ${L.yr} 年 · ${L.age} 岁</span>`+
+      `<b>${sel.gz.join("")} 运</b></div>`+
+    `<div class="kv"><span>年干 ${L.gz[0]}（${WX[GAN_WX[GAN.indexOf(L.gz[0])]]}）</span><b>${L.ss}</b></div>`+
+    `<div class="kv"><span>年支 ${L.gz[1]} 藏 ${CANG[L.gz[1]]}</span><b>`+
+      [...CANG[L.gz[1]]].map(c=>shishen(day,c)).join(" · ")+`</b></div>`+
+    `<div class="kv"><span>星运（日主 ${day} 于 ${L.gz[1]}）</span><b>${L.xy}</b></div>`+
+    `<div class="kv"><span>自坐（${L.gz[0]} 于 ${L.gz[1]}）</span><b>${L.zz}</b></div>`;
+
   const s=R.seq[ST.sel];
   $("dyDetail").innerHTML=
     `<div class="kv"><span>${s.gz.join("")} 运（${s.from}–${s.from+9}岁 · ${s.year}年起）</span></div>`+
     `<div class="kv"><span>天干 ${s.gz[0]}</span><b>${shishen(day,s.gz[0])}</b></div>`+
     `<div class="kv"><span>地支 ${s.gz[1]} 藏 ${CANG[s.gz[1]]}</span><b>`+
-      [...CANG[s.gz[1]]].map(c=>shishen(day,c)).join(" · ")+`</b></div>`;
+      [...CANG[s.gz[1]]].map(c=>shishen(day,c)).join(" · ")+`</b></div>`+
+    `<div class="kv"><span>星运（日主 ${day} 于 ${s.gz[1]}）</span><b>${changsheng(day,s.gz[1])}</b></div>`+
+    `<div class="kv"><span>自坐（${s.gz[0]} 于 ${s.gz[1]}）</span><b>${changsheng(s.gz[0],s.gz[1])}</b></div>`;
 }
 ["bd","bt"].forEach(id=>$(id).addEventListener("input",()=>{ST.sel=0;render();}));
 $("gM").onclick=()=>{ST.male=true;ST.sel=0;$("gM").setAttribute("aria-pressed","true");

@@ -380,3 +380,21 @@ def eot_minutes(day_of_year):
 def true_solar_offset(day_of_year, lon, std_meridian=120.0):
     """返回 (经度时差, 均时差) 分钟。东经为正。"""
     return (lon-std_meridian)*4.0, eot_minutes(day_of_year)
+
+
+# ══════════ 十二长生 ══════════
+STAGES12 = ["长生","沐浴","冠带","临官","帝旺","衰","病","死","墓","绝","胎","养"]
+CS_START = {"甲":"亥","丙":"寅","戊":"寅","庚":"巳","壬":"申",
+            "乙":"午","丁":"酉","己":"酉","辛":"子","癸":"卯"}
+YANG_GAN = set("甲丙戊庚壬")
+
+def changsheng(gan, zhi):
+    """十二长生：阳干顺行、阴干逆行"""
+    st = ZHI12.index(CS_START[gan]); z = ZHI12.index(zhi)
+    step = (z - st) if gan in YANG_GAN else (st - z)
+    return STAGES12[step % 12]
+
+def year_ganzhi(year):
+    """流年干支（以立春为界的年）"""
+    i = (year - 4) % 60
+    return GAN10[i % 10], ZHI12[i % 12]

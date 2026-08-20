@@ -27,6 +27,7 @@
 - **万年历** —— 自算节气定四柱，出流年 / 流月 / 流日 / 流时飞星（含遁局、立春时刻）
 - **八字命书** —— 四柱、十神、藏干、五行加权、十步大运（起运按「距节天数 ÷ 3」实算），
   含**真太阳时校正**（经度时差 + 均时差，跨日自动重排四柱）；
+  另有**流年细盘**：所选大运的十个流年，逐年给出十神、星运（日主十二长生）与自坐；
   四柱与大运干支已与 xunq.chat 命书比对一致
 - **命卦查询** —— 公历年份 → 生肖 + 男 / 女命卦、东西四命
 - **八宅明镜** —— 坐山定宅卦，游年变爻推四吉四凶方，叠加在九宫盘上；命卦与宅卦东西四命匹配
@@ -57,12 +58,14 @@
 | 中心放射法 · 8 扇区面积守恒 + 归一化 | 三例守恒；方正/细长不误判，L 形只报西南 |
 | 八字四柱 + 大运干支 · 2000-05-20 14:30 乾造 | 与 xunq.chat 命书全同 |
 | 真太阳时 · 2000-05-20 乌鲁木齐 | 经度差/均时差/四柱与 xunq.chat 一致 |
-| 一致性测试 | **1298 / 1298 通过** |
+| 十二长生 · 星运/自坐 | 与 xunq.chat 公开数据 10 例全同 |
+| 流年十神序列 · 甲申运十年 | 10/10 全同 |
+| 一致性测试 | **1322 / 1322 通过** |
 
 跑基准：
 
 ```bash
-python3 reference/conformance_test.py    # 1298/1298 passed
+python3 reference/conformance_test.py    # 1322/1322 passed
 ```
 
 把 `conformance_test.py` 里的 `ADAPTER` 换成你自己的引擎，即可用同一套 golden 数据做回归。
@@ -83,7 +86,7 @@ reference/
   feixing_engine.py         参考实现（下卦 pan / 替卦 pan_ti / 八宅 bazhai /
                             户型 plan_coverage · radial_coverage · centroid）
   calendar_proto.py         节气 / 四柱 / 紫白 原型
-  conformance_test.py       一致性测试 1298 条
+  conformance_test.py       一致性测试 1322 条
   gen_golden.py             基准集生成脚本
   golden_24山向.json         一至九运 × 24 坐向 = 216 组完整盘
   golden_*.csv              九运 / 八运 / 流年中宫 基准（扁平化便于 diff）

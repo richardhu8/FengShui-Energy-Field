@@ -228,6 +228,29 @@ dl,de=true_solar_offset(n,87.62)
 check("TS.锚点.经度差", abs(dl-(-130)) < 1.0, True)
 check("TS.锚点.均时差", abs(de-3.5) < 1.0, True)
 
-print(f"[含真太阳时] {TOTAL-len(FAILS)}/{TOTAL} passed")
+print(f"[含真太阳时] {TOTAL-len(FAILS)}/{TOTAL} checks so far")
+
+# ── 十二长生 / 流年 ──
+from feixing_engine import changsheng, year_ganzhi, STAGES12
+# 结构：每干对十二支恰覆盖十二阶段各一次
+for g in GAN10:
+    got=[changsheng(g,z) for z in ZHI12]
+    check(f"CS.{g}.覆盖", sorted(got), sorted(STAGES12))
+# 外部锚点：xunq.chat 同一命例（日主戊）公开的星运/自坐
+for g,z,exp in [("戊","午","帝旺"),("戊","申","病"),("甲","申","绝"),
+                ("戊","未","衰"),("癸","未","墓"),("戊","酉","死"),
+                ("戊","子","胎"),("戊","寅","长生"),("戊","卯","沐浴"),
+                ("丙","午","帝旺")]:
+    check(f"CS.锚点.{g}{z}", changsheng(g,z), exp)
+# 流年干支：2026 应为丙午；六十甲子循环
+check("LN.2026", year_ganzhi(2026), ("丙","午"))
+check("LN.2025", year_ganzhi(2025), ("乙","巳"))
+check("LN.六十循环", year_ganzhi(2026), year_ganzhi(2026+60))
+# 该命例甲申运十个流年的十神，与竞品公开列表一致
+exp_ss=["正官","偏印","正印","比肩","劫财","食神","伤官","偏财","正财","七杀"]
+got_ss=[shishen("戊", year_ganzhi(y)[0]) for y in range(2025,2035)]
+check("LN.十神序列", got_ss, exp_ss)
+
+print(f"[含长生流年] {TOTAL-len(FAILS)}/{TOTAL} passed")
 for f in FAILS: print("  FAIL",f)
 sys.exit(1 if FAILS else 0)
