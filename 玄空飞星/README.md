@@ -52,7 +52,9 @@ python3 reference/conformance_test.py    # 1229/1229 passed
 ## 目录
 
 ```
-玄空飞星排盘.html            单文件网页（可直接打开）
+玄空飞星排盘.html            单文件网页（排盘 + 八宅 + 缺角）
+炁流场3D.html                三维炁流场（零依赖软件渲染）
+寻炁-技术拆解.html            竞品 xunq.chat 技术拆解与对策
 玄空飞星排盘-算法规格.md      算法规格 + 勘误 + 替卦起星完整推导
 reference/
   feixing_engine.py         参考实现（下卦 pan / 替卦 pan_ti / 八宅 bazhai /
