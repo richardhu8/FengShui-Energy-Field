@@ -1,7 +1,5 @@
 # 玄空飞星盘 · Xuan Kong Flying Star
 
-> 本目录是 **FengShui-Energy-Field** 的玄空飞星模块：坐向 → 九宫飞星盘的计算内核 + 可交互网页。
-
 交互式**三元玄空飞星排盘**网页：拖动罗盘定坐向，自动排九宫飞星（**下卦 + 替卦起星**），
 附万年历（流年/流月/流日/流时飞星）与命卦查询。单文件、零依赖，直接用浏览器打开即可。
 
@@ -66,25 +64,41 @@
 | 神煞推导 vs 传世表 | 四神煞 × 四局 16/16 全同 |
 | 纳音 · 庚辰/戊寅 | 与 xunq.chat 公开值一致 |
 | 合盘关系 · 五合/六合/六冲/六害/三合 | 公式反推与传世表完全一致（不多不少） |
-| 一致性测试 | **1443 / 1443 通过** |
+| 月相 · 4 个已知朔 + 3 个已知望时刻 | 月龄偏差均 &lt;0.5 天 |
+| 日出日落 · 四城二至昼长 vs 公开表 | 8 例偏差均 &lt;2 分钟 |
+| 潮汐 · 朔望大潮 / 上下弦小潮 | 大小潮比 2.70×（天文参考 2~3×） |
+| 天时模块 · 网页 JS vs Python 引擎 | 139 个数值逐位对齐（阈值 1e-6） |
+| 月相图 · 亮面占比像素实测 | 10 相误差均 &lt;0.4%，盈亏朝向正确 |
+| 一致性测试 | **1476 / 1476 通过** |
 
 跑基准：
 
 ```bash
-python3 reference/conformance_test.py    # 1443/1443 passed
+python3 reference/conformance_test.py    # 1476/1476 passed
 ```
 
 把 `conformance_test.py` 里的 `ADAPTER` 换成你自己的引擎，即可用同一套 golden 数据做回归。
 
 ## 站点
 
-`site/` 是可直接部署的静态站点（门户 + 三个工具，统一导航，英文路径）。
+`site/` 是可直接部署的静态站点（门户星图 + 六个工具，统一导航，英文路径）。
 部署方式见 [site/DEPLOY.md](site/DEPLOY.md)；仓库根部已备好 GitHub Pages workflow。
+
+**`site/` 由脚本生成，不要手改**——源文件用中文名便于本机阅读，发布副本用 ASCII 名避免 URL 编码：
+
+```bash
+python3 build_site.py            # 重新生成 site/，并把导航同步回源文件
+python3 build_site.py --check    # 只报不同步，不写盘（供 CI 用）
+```
+
+此前 `site/` 是手工维护的，规则逐文件不一致：`外环境立极尺.html` 的导航停在 5 项、
+`八字命书.html` 6 项、`炁流场3D.html` 连 `nav.site` 样式都没有。改脚本生成后不再有这类漂移。
 
 ## 目录
 
 ```
-site/                        可部署站点（index / paipan / qiflow / research）
+build_site.py                site/ 生成脚本（源文件 → 发布副本，导航单一来源）
+site/                        可部署站点（index 门户星图 + 六个工具页）
 api/                         AI 堪舆师 Serverless 后端（Cloudflare Worker）
 玄空飞星排盘.html            单文件网页（可直接打开）
 玄空飞星排盘-算法规格.md      算法规格 + 勘误 + 替卦起星完整推导
@@ -92,7 +106,7 @@ reference/
   feixing_engine.py         参考实现（下卦 pan / 替卦 pan_ti / 八宅 bazhai /
                             户型 plan_coverage · radial_coverage · centroid）
   calendar_proto.py         节气 / 四柱 / 紫白 原型
-  conformance_test.py       一致性测试 1443 条
+  conformance_test.py       一致性测试 1476 条
   gen_golden.py             基准集生成脚本
   golden_24山向.json         一至九运 × 24 坐向 = 216 组完整盘
   golden_*.csv              九运 / 八运 / 流年中宫 基准（扁平化便于 diff）
@@ -107,8 +121,12 @@ reference/
 - 户型需按**上北下南**绘制（与立极尺/地图取向一致）
 - **时刻按北京时间（UTC+8）解算**，异地使用需先换算。此坑实测有产品踩中：xunq.chat 的 /kanyu/ 与 /xunqi/ 两个模块对同一时刻给出不同时柱（乙未 vs 己丑），即一处用北京时间、一处用浏览器本地时间
 
+- **天时为天文近似式**：月相未计月球轨道摄动，月龄精度 ±0.5 天；日出日落用 NOAA 简化式，
+  实测偏差约 ±5 分钟（北京 2026-08-20 得 05:32/19:07，年历为 05:37/19:00）。够用于择时参考，**不可当年历**
+- **潮汐只是日月起潮力的相对强度**，不含地形、水深、风与气压——不是实际潮高，沿海作业请查潮汐表
+
 传统文化学习与参考用途，不替代专业勘察。
 
 ## License
 
-[MIT](../LICENSE)（随仓库根部）
+[MIT](LICENSE)

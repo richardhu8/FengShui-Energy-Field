@@ -318,5 +318,54 @@ for z in ["辰","午","酉","亥"]: check(f"HP.自刑.{z}", zhi_xing(z,z), True)
 for z in ["子","丑","寅"]:      check(f"HP.非自刑.{z}", zhi_xing(z,z), False)
 
 print(f"[含合盘] {TOTAL-len(FAILS)}/{TOTAL} passed")
+
+# ══ 天时：月相 · 潮汐 · 日出日落 ══════════════════════════════════
+from feixing_engine import (julian_day, moon_age, moon_illumination, moon_phase_name,
+                            tide_percent, sun_times, SYNODIC, J2000_NEW, TIDE_MIN, TIDE_MAX)
+# 全部对外部权威值取证：朔望时刻取天文年历，昼长取公开日出日落表。
+# 容差按各自算法的固有精度设定，不是"调到能过"。
+
+# 已知朔时刻（UTC）→ 月龄应回到 0（或 29.53）
+for y,m,d,h in [(2024,1,11,11.96),(2024,6,6,12.63),(2025,1,29,12.60),(2025,7,24,19.20)]:
+    a = moon_age(julian_day(y,m,d,h))
+    check(f"天时.朔.{y}-{m:02d}-{d:02d}", min(a, SYNODIC-a) < 0.6, True)
+# 已知望时刻（UTC）→ 月龄应接近 14.77
+for y,m,d,h in [(2024,1,25,17.90),(2024,6,22,1.13),(2025,1,13,22.45)]:
+    check(f"天时.望.{y}-{m:02d}-{d:02d}", abs(moon_age(julian_day(y,m,d,h))-SYNODIC/2) < 0.6, True)
+# 相名分段必须单调覆盖整个朔望月，不留空档、不重叠
+seen = [moon_phase_name(J2000_NEW + i*SYNODIC/400) for i in range(400)]
+check("天时.相名.八相齐全", set(seen), {"朔","娥眉月","上弦","盈凸月","望","亏凸月","下弦","残月"})
+check("天时.相名.朔照亮≈0", round(moon_illumination(J2000_NEW), 3), 0.0)
+check("天时.相名.望照亮≈1", round(moon_illumination(J2000_NEW+SYNODIC/2), 3), 1.0)
+
+# 潮汐：朔望大潮、上下弦小潮；大小潮比落在天文参考的 2~3 倍
+check("天时.潮汐.朔为大潮",  round(tide_percent(J2000_NEW)), 100)
+check("天时.潮汐.望为大潮",  round(tide_percent(J2000_NEW+SYNODIC/2)), 100)
+check("天时.潮汐.上弦小潮",  round(tide_percent(J2000_NEW+SYNODIC/4)), 0)
+check("天时.潮汐.下弦小潮",  round(tide_percent(J2000_NEW+SYNODIC*3/4)), 0)
+check("天时.潮汐.大小潮比", 2.0 < TIDE_MAX/TIDE_MIN < 3.0, True)
+
+# 昼长 vs 公开日出日落表（容差 8 分钟 = 0.134h）
+for nm,la,lo,tz,summer,winter in [("北京",39.9042,116.4074,8,15.03,9.33),
+                                  ("广州",23.1291,113.2644,8,13.58,10.70),
+                                  ("哈尔滨",45.8038,126.5350,8,15.72,8.70),
+                                  ("三亚",18.2528,109.5119,8,13.20,11.03)]:
+    check(f"天时.夏至昼长.{nm}", abs(sun_times(2026,6,21,la,lo,tz)[2]-summer) < 0.134, True)
+    check(f"天时.冬至昼长.{nm}", abs(sun_times(2026,12,21,la,lo,tz)[2]-winter) < 0.134, True)
+# 二分昼长略长于 12h（蒙气差 + 日面半径），且纬度越高超出越多 —— 这是物理，不是误差
+for la in [0, 23.1, 39.9, 64.1]:
+    check(f"天时.春分昼长>12h.{la}", 12.0 < sun_times(2026,3,20,la,116.4,8)[2] < 12.4, True)
+check("天时.高纬超出更多",
+      sun_times(2026,3,20,64.1,116.4,8)[2] > sun_times(2026,3,20,0,116.4,8)[2], True)
+# 日出必在日落前、且中点为真太阳正午附近
+r,s,_ = sun_times(2026,8,20,39.9042,116.4074,8)
+check("天时.北京日出", abs(r-5.53) < 0.15, True)      # 年历 05:37，简化式 ±5 分钟
+check("天时.北京日落", abs(s-19.12) < 0.15, True)      # 年历 19:00
+check("天时.正午居中", abs((r+s)/2-12.27) < 0.1, True)  # 116.4°E 真太阳正午
+# 极区不得抛异常
+check("天时.极昼", sun_times(2026,6,21,78,15,1), (None,None,24.0))
+check("天时.极夜", sun_times(2026,12,21,78,15,1), (None,None,0.0))
+
+print(f"[含天时] {TOTAL-len(FAILS)}/{TOTAL} passed")
 for f in FAILS: print("  FAIL",f)
 sys.exit(1 if FAILS else 0)

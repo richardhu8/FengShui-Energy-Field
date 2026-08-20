@@ -167,13 +167,30 @@ svg.plan .vtx:hover{r:7}
 footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;font-size:11.5px;color:var(--ink-3)}
 footer code{background:var(--panel-2);padding:1px 4px;border-radius:2px}
 @media(prefers-reduced-motion:no-preference){.cell,.seg button{transition:background .15s}}
+.skypanel{display:flex;align-items:center;gap:14px;padding:12px 14px;border:1px solid var(--line);
+  border-radius:10px;background:linear-gradient(160deg,#0d1220,#141a2b);margin-bottom:10px}
+.skypanel svg{width:60px;height:60px;flex:none}
+.skymeta{display:flex;flex-direction:column;gap:3px;min-width:0}
+.skymeta b{font-size:19px;color:#e8d9a8;letter-spacing:.06em}
+.skymeta span{font-size:11.5px;color:var(--ink-3);line-height:1.5}
+.tidebar{height:5px;border-radius:3px;background:rgba(255,255,255,.10);overflow:hidden;margin-top:5px}
+.tidebar i{display:block;height:100%;border-radius:3px;
+  background:linear-gradient(90deg,#4a7fb5,#7fc0e8);transition:width .35s ease}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+nav.site{display:flex;gap:2px;margin-left:auto;align-items:center;flex-wrap:wrap}
+nav.site a{font-size:11.5px;letter-spacing:.1em;color:#9A8F78;text-decoration:none;
+  padding:4px 10px;border-radius:2px;white-space:nowrap}
+nav.site a:hover{color:var(--brass)}
+nav.site a[aria-current="page"]{color:var(--lacquer);background:var(--brass);font-weight:600}
+header .sub{display:none}
 </style>
 
 <header>
   <span class="mark">玄空</span>
   <span class="name">飞星盘</span>
   <span class="sub">Xuan Kong Flying Star · 下卦 / 替卦</span>
-</header>
+<nav class="site"><a href="site/index.html">门户</a><a href="玄空飞星排盘.html" aria-current="page">排盘</a><a href="炁流场3D.html">炁流场</a><a href="外环境立极尺.html">立极尺</a><a href="八字命书.html">命书</a><a href="合盘.html">合盘</a><a href="寻炁-技术拆解.html">竞品拆解</a></nav></header>
 
 <main>
   <div class="rail">
@@ -225,6 +242,23 @@ footer code{background:var(--panel-2);padding:1px 4px;border-radius:2px}
           <div><label for="time">时刻</label><input id="time" type="time" value="12:00"></div>
         </div>
         <div id="pillars" style="margin-top:12px"></div>
+      </div>
+      <div class="sec">
+        <h2>天时</h2>
+        <p class="hint">月相 · 潮汐 · 日出日落，随上方日期联动<br>
+          <span style="color:var(--ink-3)">天文近似式，日出日落偏差约 ±5 分钟 —— 择时参考，不可当年历</span></p>
+        <div class="row" style="margin-bottom:10px">
+          <div><label for="tcity">地点</label><select id="tcity"></select></div>
+        </div>
+        <div class="skypanel">
+          <svg id="moonsvg" viewBox="0 0 72 72" role="img" aria-labelledby="moonalt"></svg>
+          <div class="skymeta">
+            <b class="serif" id="phName">—</b>
+            <span id="phSub">—</span>
+            <span id="moonalt" class="sr-only"></span>
+          </div>
+        </div>
+        <div id="tianshi"></div>
       </div>
       <div class="sec">
         <h2>命卦查询</h2>
@@ -759,6 +793,109 @@ function detectPlan(){
 
 /* ═══════ 状态 ═══════ */
 const $=id=>document.getElementById(id);
+
+/* ══ 天时：月相 · 潮汐 · 日出日落 ═══════════════════════════════════
+   与 reference/feixing_engine.py 同式，基准测试 33 项（天时.*）覆盖。
+   月相 ±0.5 天（未计月球轨道摄动）；日出日落 ±5 分钟。          */
+const SYNODIC=29.530588853, J2000_NEW=2451550.09766, TIDE_K=0.46;
+const RAD=Math.PI/180;
+
+function julianDay(y,m,d,hour){
+  if(m<=2){y-=1;m+=12}
+  const a=Math.floor(y/100), b=2-a+Math.floor(a/4);
+  return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+b-1524.5+(hour||0)/24;
+}
+const moonAge=jd=>((jd-J2000_NEW)%SYNODIC+SYNODIC)%SYNODIC;
+const moonIllum=jd=>(1-Math.cos(2*Math.PI*moonAge(jd)/SYNODIC))/2;
+const PHASES=[[0.0206,"朔"],[0.2294,"娥眉月"],[0.2706,"上弦"],[0.4794,"盈凸月"],
+              [0.5206,"望"],[0.7294,"亏凸月"],[0.7706,"下弦"],[0.9794,"残月"]];
+function moonPhaseName(jd){
+  const f=moonAge(jd)/SYNODIC;
+  for(const [e,n] of PHASES) if(f<e) return n;
+  return "朔";
+}
+/* 起潮力 ∝ M/r³；日月分力夹角随月相走 2 倍角。只反映天文驱动，
+   不含地形、风、气压 —— 不是实际潮高。 */
+function tideStrength(jd){
+  const ph=2*Math.PI*moonAge(jd)/SYNODIC;
+  return Math.hypot(1+TIDE_K*Math.cos(2*ph), TIDE_K*Math.sin(2*ph));
+}
+const tidePercent=jd=>(tideStrength(jd)-(1-TIDE_K))/(2*TIDE_K)*100;
+
+/* NOAA 简化式。极昼 [null,null,24]，极夜 [null,null,0]。 */
+function sunTimes(y,m,d,lat,lon,tz){
+  const day0=julianDay(y,m,d,0);
+  const n=(day0+0.5)-2451545.0+0.0008;        // J2000 历元在正午
+  const js=n-lon/360;                          // 东经使正午提前
+  const ma=(357.5291+0.98560028*js)%360;
+  const ctr=1.9148*Math.sin(ma*RAD)+0.0200*Math.sin(2*ma*RAD)+0.0003*Math.sin(3*ma*RAD);
+  const lam=(ma+ctr+180+102.9372)%360;
+  const transit=2451545.0+js+0.0053*Math.sin(ma*RAD)-0.0069*Math.sin(2*lam*RAD);
+  const dec=Math.asin(Math.sin(lam*RAD)*Math.sin(23.4397*RAD));
+  const cw=(Math.sin(-0.833*RAD)-Math.sin(lat*RAD)*Math.sin(dec))/(Math.cos(lat*RAD)*Math.cos(dec));
+  if(cw>1)  return [null,null,0];
+  if(cw<-1) return [null,null,24];
+  const w=Math.acos(cw)/RAD;
+  const loc=j=>(((j-day0)*24+tz)%24+24)%24;
+  return [loc(transit-w/360), loc(transit+w/360), 2*w/15];
+}
+const hhmm=h=>h==null?"—":String(Math.floor(h)).padStart(2,"0")+":"+String(Math.round(h%1*60)).padStart(2,"0");
+const durn=h=>Math.floor(h)+" 时 "+Math.round(h%1*60)+" 分";
+
+/* 月相图：右半圆 + 半椭圆终止线合成，rx = r|1-2k|。
+   k=.5 时 rx=0 得正半月；k=1 时补成满圆；k=0 时面积归零。
+   亏相水平镜像。 */
+function drawMoon(k,waxing){
+  const R=26,cx=36,cy=36,rx=(R*Math.abs(1-2*k)).toFixed(2);
+  // y 轴向下：由下而上 sweep=1 是向左凸。故亏相（k<.5）取 0 向右凹进，
+  // 盈相（k>.5）取 1 向左补满。像素实测校正过，勿凭直觉翻回去。
+  const sweep=k<0.5?0:1;
+  const lit=`M ${cx},${cy-R} A ${R},${R} 0 0 1 ${cx},${cy+R} A ${rx},${R} 0 0 ${sweep} ${cx},${cy-R} Z`;
+  $("moonsvg").innerHTML=
+    `<defs><radialGradient id="mg" cx="38%" cy="34%">
+       <stop offset="0%" stop-color="#fdf6df"/><stop offset="100%" stop-color="#d8c68d"/>
+     </radialGradient></defs>
+     <circle cx="${cx}" cy="${cy}" r="${R}" fill="#161b2a" stroke="rgba(232,217,168,.22)"/>
+     <g transform="${waxing?'':`translate(${cx*2},0) scale(-1,1)`}">
+       <path d="${lit}" fill="url(#mg)"/>
+     </g>
+     <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(232,217,168,.30)"/>`;
+}
+
+/* 经纬度：日出日落必须要纬度，故此表比命书的纯经度表多一列 */
+const TCITY=[["北京",39.9042,116.4074],["上海",31.2304,121.4737],["广州",23.1291,113.2644],
+  ["深圳",22.5431,114.0579],["杭州",30.2741,120.1551],["南京",32.0603,118.7969],
+  ["成都",30.5728,104.0668],["重庆",29.5630,106.5516],["武汉",30.5928,114.3055],
+  ["西安",34.3416,108.9398],["天津",39.3434,117.3616],["长沙",28.2282,112.9388],
+  ["郑州",34.7466,113.6254],["青岛",36.0671,120.3826],["沈阳",41.8057,123.4315],
+  ["哈尔滨",45.8038,126.5350],["昆明",25.0389,102.7183],["福州",26.0745,119.2965],
+  ["厦门",24.4798,118.0894],["三亚",18.2528,109.5119],["乌鲁木齐",43.8256,87.6168],
+  ["拉萨",29.6520,91.1721],["香港",22.3193,114.1694],["台北",25.0330,121.5654]];
+
+function renderTianshi(){
+  const c=TCITY[+$("tcity").value||0];
+  const [Y,M,D]=ST.date.split("-").map(Number);
+  const [hh,mm]=($("time").value||"12:00").split(":").map(Number);
+  const jd=julianDay(Y,M,D,hh+mm/60-8);          // 输入为北京时间 → UTC
+  const age=moonAge(jd), k=moonIllum(jd), waxing=age<SYNODIC/2;
+  drawMoon(k,waxing);
+  const nm=moonPhaseName(jd);
+  $("phName").textContent=nm;
+  $("phSub").innerHTML=`月龄 ${age.toFixed(1)} 天 · 照亮 ${Math.round(k*100)}%<br>${waxing?"盈（渐满）":"亏（渐缺）"}`;
+  $("moonalt").textContent=`月相${nm}，月龄${age.toFixed(1)}天，照亮${Math.round(k*100)}%`;
+
+  const tp=tidePercent(jd);
+  const [rise,set,len]=sunTimes(Y,M,D,c[1],c[2],8);
+  const polar = rise===null ? (len>12?"极昼":"极夜") : null;
+  $("tianshi").innerHTML=
+    `<div class="kv"><span>潮汐</span><b>${tp>70?"大潮":tp<30?"小潮":"中潮"} ${Math.round(tp)}%</b></div>`+
+    `<div class="tidebar"><i style="width:${Math.round(tp)}%"></i></div>`+
+    `<div class="kv" style="margin-top:8px"><span>日出</span><b>${polar?polar:hhmm(rise)}</b></div>`+
+    `<div class="kv"><span>日落</span><b>${polar?polar:hhmm(set)}</b></div>`+
+    `<div class="kv"><span>昼长</span><b>${durn(len)}</b></div>`+
+    `<p class="hint" style="margin:8px 0 0">${c[0]} ${c[1].toFixed(2)}°N ${c[2].toFixed(2)}°E · 时刻为北京时间<br>
+      潮汐仅为<b>日月起潮力</b>的相对强度，不含地形与气象，不是实际潮高</p>`;
+}
 let ST={deg:209.5,yun:9,date:"2026-08-17",time:"12:00",up:"S",method:"J",showImg:true,ring:"gong",
         plan:PLAN_L.map(p=>p.slice())};
 
@@ -1133,6 +1270,7 @@ function render(){
   if(conflict.length)all.push(`<span class="t-brass">两派分歧</span>　${conflict.join("；")}。玄空重时运、八宅重宅命，`+
     `分歧处本工具不替你裁决 —— 传统上以玄空当运星为主、八宅为辅，但需结合峦头实勘。`);
   $("notes").innerHTML=all.map(t=>`<li>${t}</li>`).join("")||"<li>本盘无显著吉凶偏向。</li>";
+  if($("tcity").options.length) renderTianshi();
   try{localStorage.setItem("fs_plan",JSON.stringify(ST.plan));
       localStorage.setItem("fs_deg",ST.deg);
       localStorage.setItem("fs_yun",ST.yun);}catch(e){}
@@ -1307,6 +1445,9 @@ function gyroStop(){
   $("deg").addEventListener("input",e=>{ST.deg=norm(+e.target.value||0);$("degr").value=ST.deg;render()});
   $("degr").addEventListener("input",e=>{ST.deg=+e.target.value;$("deg").value=ST.deg;render()});
   sel.addEventListener("change",e=>{ST.yun=+e.target.value;render()});
+  TCITY.forEach((c,i)=>{const o=document.createElement("option");o.value=i;o.textContent=c[0];$("tcity").appendChild(o)});
+  $("tcity").value=0;
+  $("tcity").addEventListener("change",renderTianshi);
   $("date").addEventListener("input",e=>{if(e.target.value){ST.date=e.target.value;render()}});
   $("time").addEventListener("input",e=>{if(e.target.value){ST.time=e.target.value;render()}});
   $("birth").addEventListener("input",render);

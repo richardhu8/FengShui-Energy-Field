@@ -7,7 +7,7 @@
 用途：给自研排盘引擎当 golden reference，不是生产代码。
 """
 from __future__ import annotations
-import json, csv, sys
+import json, csv, sys, math
 
 # ---------- 常量 ----------
 # 洛书飞泊路径：中 → 乾(西北) → 兑(西) → 艮(东北) → 离(南) → 坎(北) → 坤(西南) → 震(东) → 巽(东南)
@@ -455,3 +455,92 @@ ZIXING = ["辰","午","酉","亥"]
 def zhi_xing(a, b):
     if a == b: return a in ZIXING
     return any(a in t and b in t for t in XING3)
+
+
+# ═══════════════════════════════════════════════════════════════════
+# 天时：月相 · 潮汐 · 日出日落
+# 全部为天文近似式，精度边界写在下方 docstring，勿当年历用
+# ═══════════════════════════════════════════════════════════════════
+
+SYNODIC = 29.530588853          # 朔望月（日）
+J2000_NEW = 2451550.09766       # 2000-01-06 18:14 UTC 的朔
+
+def julian_day(y, m, d, hour=0.0):
+    """公历 → 儒略日。hour 为 UTC 小时。"""
+    if m <= 2:
+        y -= 1; m += 12
+    a = y // 100
+    b = 2 - a + a // 4
+    return int(365.25 * (y + 4716)) + int(30.6001 * (m + 1)) + d + b - 1524.5 + hour / 24
+
+
+def moon_age(jd):
+    """月龄（日），0=朔，14.77=望。精度 ±0.5 天（未计月球轨道摄动）。"""
+    return (jd - J2000_NEW) % SYNODIC
+
+
+def moon_illumination(jd):
+    """月面照亮比例 0~1。用月龄的余弦近似，非严格的日月地夹角。"""
+    return (1 - math.cos(2 * math.pi * moon_age(jd) / SYNODIC)) / 2
+
+
+MOON_PHASES = [(0.0206, "朔"), (0.2294, "娥眉月"), (0.2706, "上弦"), (0.4794, "盈凸月"),
+               (0.5206, "望"), (0.7294, "亏凸月"), (0.7706, "下弦"), (0.9794, "残月")]
+
+def moon_phase_name(jd):
+    f = moon_age(jd) / SYNODIC
+    for edge, name in MOON_PHASES:
+        if f < edge:
+            return name
+    return "朔"
+
+
+TIDE_SOLAR_RATIO = 0.46         # 太阳起潮力 / 月球起潮力
+
+def tide_strength(jd):
+    """日月起潮力合成的相对强度。朔望为大潮、上下弦为小潮。
+
+    起潮力 ∝ M/r³。日月分力夹角随月相走 2 倍角，故用 2φ 合成。
+    只反映天文驱动，不含地形、风、气压 —— 不能当作实际潮高。
+    """
+    ph = 2 * math.pi * moon_age(jd) / SYNODIC
+    return math.hypot(1 + TIDE_SOLAR_RATIO * math.cos(2 * ph),
+                      TIDE_SOLAR_RATIO * math.sin(2 * ph))
+
+TIDE_MIN = 1 - TIDE_SOLAR_RATIO   # 上下弦
+TIDE_MAX = 1 + TIDE_SOLAR_RATIO   # 朔望
+
+def tide_percent(jd):
+    """归一到 0~100：0=最小潮（上下弦），100=最大潮（朔望）。"""
+    return (tide_strength(jd) - TIDE_MIN) / (TIDE_MAX - TIDE_MIN) * 100
+
+
+SUN_ALTITUDE = -0.833           # 日出日落定义高度角：蒙气差 34' + 日面半径 16'
+
+def sun_times(y, m, d, lat, lon, tz=8.0):
+    """日出 / 日落 / 昼长，单位为小时（当地时区）。
+
+    NOAA 简化式。实测偏差约 ±5 分钟（北京 2026-08-20 得 05:32/19:07，
+    年历为 05:37/19:00）—— 够用于择时参考，不可当年历。
+    极昼返回 (None, None, 24.0)，极夜返回 (None, None, 0.0)。
+    """
+    day0 = julian_day(y, m, d)
+    n = (day0 + 0.5) - 2451545.0 + 0.0008      # J2000 历元在正午，故 +0.5
+    js = n - lon / 360.0                        # 东经使平太阳正午提前
+    ma = (357.5291 + 0.98560028 * js) % 360     # 太阳平近点角
+    ctr = (1.9148 * math.sin(math.radians(ma))
+           + 0.0200 * math.sin(math.radians(2 * ma))
+           + 0.0003 * math.sin(math.radians(3 * ma)))
+    lam = (ma + ctr + 180 + 102.9372) % 360     # 黄经
+    transit = (2451545.0 + js + 0.0053 * math.sin(math.radians(ma))
+               - 0.0069 * math.sin(math.radians(2 * lam)))
+    dec = math.asin(math.sin(math.radians(lam)) * math.sin(math.radians(23.4397)))
+    cos_w = ((math.sin(math.radians(SUN_ALTITUDE)) - math.sin(math.radians(lat)) * math.sin(dec))
+             / (math.cos(math.radians(lat)) * math.cos(dec)))
+    if cos_w > 1:
+        return None, None, 0.0                  # 极夜
+    if cos_w < -1:
+        return None, None, 24.0                 # 极昼
+    w = math.degrees(math.acos(cos_w))          # 半昼弧（度）
+    local = lambda j: ((j - day0) * 24 + tz) % 24
+    return local(transit - w / 360.0), local(transit + w / 360.0), 2 * w / 15.0

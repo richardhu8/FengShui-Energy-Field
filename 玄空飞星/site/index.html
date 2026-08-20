@@ -1,7 +1,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>玄空飞星工作台</title>
-<meta name="description" content="可验证的东方术数工具：玄空飞星、三维炁流、立极定向、八字命书与合盘。算法公开，1443 条一致性测试，五个独立实现交叉校验。">
+<meta name="description" content="可验证的东方术数工具：玄空飞星、三维炁流、立极定向、八字命书与合盘。算法公开，1476 条一致性测试，五个独立实现交叉校验，天文项另比对公开年历。">
 <style>
 :root{
   --ground:#E7E1D2; --panel:#F3EEE2; --panel-2:#EAE4D5; --edge:#CFC5AC;
@@ -64,6 +64,13 @@ nav.site a[aria-current="page"]{color:var(--lacquer);background:var(--brass);fon
 .node.soon:hover .orb{border-color:rgba(201,162,74,.42);
   box-shadow:0 0 0 6px rgba(201,162,74,.05), 0 6px 22px -8px #000}
 
+.moonbox{position:absolute;right:22px;top:20px;display:flex;align-items:center;gap:9px;
+  z-index:2;pointer-events:none;opacity:.92}
+.moonbox svg{width:38px;height:38px;flex:none}
+.moontxt{display:flex;flex-direction:column;line-height:1.35}
+.moontxt b{font-family:"Songti SC","STSong",SimSun,serif;font-size:13px;color:#D8BC77;letter-spacing:.1em}
+.moontxt span{font-size:10.5px;color:#7d745f;letter-spacing:.04em}
+@media(max-width:640px){.moonbox{position:static;justify-content:center;margin:0 0 18px}}
 .tip{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);
   width:min(660px,90vw);text-align:center;pointer-events:none;
   background:rgba(16,14,11,.88);border:1px solid rgba(201,162,74,.28);border-radius:3px;
@@ -117,6 +124,10 @@ code{background:var(--panel-2);padding:1px 5px;border-radius:2px;font-size:.9em}
 
 <div class="sky">
   <canvas id="stars"></canvas>
+  <div class="moonbox" id="moonbox" hidden>
+    <svg id="pmoon" viewBox="0 0 72 72" aria-hidden="true"></svg>
+    <div class="moontxt"><b id="pmName"></b><span id="pmSub"></span></div>
+  </div>
   <svg id="links" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
   <div class="skyin" id="skyin"></div>
   <div class="skyhint">选一颗星，进入对应工具</div>
@@ -139,7 +150,11 @@ code{background:var(--panel-2);padding:1px 5px;border-radius:2px;font-size:.9em}
     <tr><td>八宅游年（坎／乾／艮宅）</td><td>经典游年歌</td><td class="n ok">各 8 / 8</td></tr>
     <tr><td>神煞推导 vs 传世表</td><td>四神煞 × 四局</td><td class="n ok">16 / 16</td></tr>
     <tr><td>合盘关系公式反推</td><td>传世表</td><td class="n ok">不多不少</td></tr>
-    <tr><td colspan="2"><b>一致性测试总计</b></td><td class="n ok">1443 / 1443</td></tr>
+    <tr><td>月相 · 已知朔望时刻</td><td>天文年历</td><td class="n ok">7 例偏差 &lt;0.5 天</td></tr>
+    <tr><td>日出日落 · 二至昼长</td><td>公开日出日落表</td><td class="n ok">8 例偏差 &lt;2 分</td></tr>
+    <tr><td>天时模块 网页 vs Python</td><td>逐位比对</td><td class="n ok">139 / 139</td></tr>
+    <tr><td>月相图亮面占比 · 像素实测</td><td>光栅化测量</td><td class="n ok">10 相误差 &lt;0.4%</td></tr>
+    <tr><td colspan="2"><b>一致性测试总计</b></td><td class="n ok">1476 / 1476</td></tr>
   </table></div>
   <div class="claim">
     <b>大量「要背的表」其实是算术。</b>
@@ -174,6 +189,37 @@ code{background:var(--panel-2);padding:1px 5px;border-radius:2px;font-size:.9em}
 </main>
 
 <script>
+/* ══ 门户月相：显示此刻真实月相，与排盘页天时面板同式 ═════════════
+   算法见 reference/feixing_engine.py，基准测试 33 项覆盖。
+   月龄精度 ±0.5 天（未计月球轨道摄动）。 */
+(function(){
+  const SYN=29.530588853, J0=2451550.09766;
+  const now=new Date();
+  // 本地时间 → UTC 儒略日
+  let y=now.getUTCFullYear(), m=now.getUTCMonth()+1;
+  const d=now.getUTCDate(), h=now.getUTCHours()+now.getUTCMinutes()/60;
+  if(m<=2){y-=1;m+=12}
+  const a=Math.floor(y/100), b=2-a+Math.floor(a/4);
+  const jd=Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+b-1524.5+h/24;
+  const age=((jd-J0)%SYN+SYN)%SYN;
+  const k=(1-Math.cos(2*Math.PI*age/SYN))/2, waxing=age<SYN/2;
+  const f=age/SYN;
+  const nm=[[0.0206,"朔"],[0.2294,"娥眉月"],[0.2706,"上弦"],[0.4794,"盈凸月"],
+            [0.5206,"望"],[0.7294,"亏凸月"],[0.7706,"下弦"],[0.9794,"残月"]]
+           .find(e=>f<e[0]);
+  // 半圆 + 半椭圆终止线；y 轴向下故盈相 sweep=1（像素实测校正过）
+  const R=26,cx=36,cy=36,rx=(R*Math.abs(1-2*k)).toFixed(2),sw=k<0.5?0:1;
+  document.getElementById("pmoon").innerHTML=
+    `<circle cx="${cx}" cy="${cy}" r="${R}" fill="#141a26" stroke="rgba(216,188,119,.20)"/>
+     <g transform="${waxing?'':`translate(72,0) scale(-1,1)`}">
+       <path d="M ${cx},${cy-R} A ${R},${R} 0 0 1 ${cx},${cy+R} A ${rx},${R} 0 0 ${sw} ${cx},${cy-R} Z"
+             fill="#e6d5a4"/></g>
+     <circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="rgba(216,188,119,.28)"/>`;
+  document.getElementById("pmName").textContent=nm?nm[1]:"朔";
+  document.getElementById("pmSub").textContent=`月龄 ${age.toFixed(1)} · 照亮 ${Math.round(k*100)}%`;
+  document.getElementById("moonbox").hidden=false;
+})();
+
 const NODES=[
   {g:"盘",n:"排盘",s:"XUAN KONG",x:26,y:31,href:"paipan.html",
    d:"<b>玄空飞星排盘</b>　拖罗盘或手机实测定坐向，排山星向星（下卦＋替卦），叠八宅四吉四凶，上传户型图算缺角。"},
