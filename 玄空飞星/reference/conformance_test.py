@@ -251,6 +251,38 @@ exp_ss=["正官","偏印","正印","比肩","劫财","食神","伤官","偏财",
 got_ss=[shishen("戊", year_ganzhi(y)[0]) for y in range(2025,2035)]
 check("LN.十神序列", got_ss, exp_ss)
 
-print(f"[含长生流年] {TOTAL-len(FAILS)}/{TOTAL} passed")
+print(f"[含长生流年] {TOTAL-len(FAILS)}/{TOTAL} checks so far")
+
+# ── 纳音 · 神煞 ──
+from feixing_engine import nayin, shensha, kongwang, NAYIN60
+# 纳音：外部锚点（xunq.chat 公开）＋结构
+check("NY.庚辰", nayin("庚","辰"), "白蜡金")
+check("NY.戊寅", nayin("戊","寅"), "城头土")
+check("NY.甲子", nayin("甲","子"), "海中金")
+check("NY.癸亥", nayin("癸","亥"), "大海水")
+check("NY.三十组", len(NAYIN60), 30)
+# 六十甲子两两同纳音
+for i in range(0,60,2):
+    a=(GAN10[i%10],ZHI12[i%12]); b=(GAN10[(i+1)%10],ZHI12[(i+1)%12])
+    check(f"NY.成对{i}", nayin(*a), nayin(*b))
+# 神煞：由长生推出的结果须与传世表一致
+TRAD={"桃花":{"申":"酉","亥":"子","寅":"卯","巳":"午"},
+      "将星":{"申":"子","亥":"卯","寅":"午","巳":"酉"},
+      "华盖":{"申":"辰","亥":"未","寅":"戌","巳":"丑"},
+      "驿马":{"申":"寅","亥":"巳","寅":"申","巳":"亥"}}
+for name,tbl in TRAD.items():
+    for ref,exp in tbl.items():
+        check(f"SS.{name}.{ref}局", shensha(ref)[name], exp)
+# 同一三合局内任一支起，结果应相同
+for grp in [("申","子","辰"),("亥","卯","未"),("寅","午","戌"),("巳","酉","丑")]:
+    base=shensha(grp[0])
+    for z in grp[1:]:
+        check(f"SS.局内一致.{z}", shensha(z), base)
+# 空亡六旬
+for d,exp in [(0,("戌","亥")),(10,("申","酉")),(20,("午","未")),
+              (30,("辰","巳")),(40,("寅","卯")),(50,("子","丑"))]:
+    check(f"KW.旬{d}", kongwang(d), exp)
+
+print(f"[含纳音神煞] {TOTAL-len(FAILS)}/{TOTAL} passed")
 for f in FAILS: print("  FAIL",f)
 sys.exit(1 if FAILS else 0)

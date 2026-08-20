@@ -140,6 +140,13 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;font-size:11.5px;color
     </div>
 
     <div class="card pad">
+      <h2>纳音与神煞</h2>
+      <p class="hint">神煞由三合局阳干的十二长生推出（桃花＝沐浴、将星＝帝旺、
+        华盖＝墓、驿马＝长生之冲），非查表</p>
+      <div id="ss"></div>
+    </div>
+
+    <div class="card pad">
       <h2>流年细盘</h2>
       <p class="hint" id="lnHint"></p>
       <div class="dy" id="ln"></div>
@@ -241,6 +248,31 @@ function dayun(y,m,d,h,male){
   return{P,fwd,yrs,mons,days,seq};
 }
 
+
+
+/* ═══ 纳音 · 神煞 ═══ */
+const NAYIN=["海中金","炉中火","大林木","路旁土","剑锋金","山头火","涧下水","城头土","白蜡金","杨柳木",
+"泉中水","屋上土","霹雳火","松柏木","长流水","沙中金","山下火","平地木","壁上土","金箔金",
+"覆灯火","天河水","大驿土","钗钏金","桑柘木","大溪水","沙中土","天上火","石榴木","大海水"];
+const gzIndex=(g,z)=>{const gi=GAN.indexOf(g),zi=ZHI.indexOf(z);
+  for(let i=0;i<60;i++)if(i%10===gi&&i%12===zi)return i;return 0;};
+const nayin=(g,z)=>NAYIN[Math.floor(gzIndex(g,z)/2)];
+// 三合局 → 代表阳干（神煞由其十二长生推出，非查表）
+const SANHE=[[["申","子","辰"],"壬"],[["亥","卯","未"],"甲"],
+             [["寅","午","戌"],"丙"],[["巳","酉","丑"],"庚"]];
+const heGan=z=>{for(const[k,g]of SANHE)if(k.includes(z))return g;return null;};
+const stageZhi=(g,st)=>[...ZHI].find(z=>changsheng(g,z)===st);
+const chong=z=>ZHI[(ZHI.indexOf(z)+6)%12];
+function shenshaOf(refZhi){          // 由参照支（年支/日支）推出四神煞所在支
+  const g=heGan(refZhi);
+  return{桃花:stageZhi(g,"沐浴"), 将星:stageZhi(g,"帝旺"),
+         华盖:stageZhi(g,"墓"),   驿马:chong(stageZhi(g,"长生"))};
+}
+const TIANYI={甲:"丑未",戊:"丑未",庚:"丑未",乙:"子申",己:"子申",
+              丙:"亥酉",丁:"亥酉",壬:"卯巳",癸:"卯巳",辛:"午寅"};
+const YANGREN={甲:"卯",丙:"午",戊:"午",庚:"酉",壬:"子"};   // 阳干帝旺
+function kongwang(di){const h=di-(di%10), hz=h%12;
+  return[ZHI[(hz+10)%12],ZHI[(hz+11)%12]];}
 
 /* ═══ 真太阳时校正 ═══ */
 const CITIES=[["北京",116.41],["上海",121.47],["广州",113.26],["深圳",114.06],
@@ -349,6 +381,35 @@ function render(){
     `<small>${s.from}–${s.from+9}岁</small><small>${s.year}起</small></div>`).join("");
   document.querySelectorAll('.dycell').forEach(c=>c.addEventListener("click",()=>{
     ST.sel=+c.getAttribute("data-i");ST.lnSel=0;render();}));
+  // —— 纳音与神煞 ——
+  const cols4=[["年",P.Y],["月",P.M],["日",P.D],["时",P.H]];
+  const kw=kongwang(P.di);
+  const refs=[["年支",P.Y[1]],["日支",P.D[1]]];
+  const hit={};                              // 支 → [神煞名]
+  refs.forEach(([lab,rz])=>{
+    const m=shenshaOf(rz);
+    Object.keys(m).forEach(k=>{
+      cols4.forEach(([n,gz])=>{ if(gz[1]===m[k]){
+        (hit[n]=hit[n]||[]).push(`${k}<small style="color:var(--ink-3)">(${lab})</small>`);}});
+    });
+  });
+  const yr=YANGREN[day];
+  cols4.forEach(([n,gz])=>{
+    if(yr&&gz[1]===yr)(hit[n]=hit[n]||[]).push("羊刃");
+    if(TIANYI[day]&&TIANYI[day].includes(gz[1]))(hit[n]=hit[n]||[]).push("天乙贵人");
+    if(kw.includes(gz[1]))(hit[n]=hit[n]||[]).push('<span style="color:var(--cinnabar)">空亡</span>');
+  });
+  $("ss").innerHTML=
+    '<div class="pillars" style="grid-template-columns:46px repeat(4,1fr)">'+
+    '<div class="rh">纳音</div>'+
+    cols4.map(([,gz])=>`<div style="font-size:12px">${nayin(gz[0],gz[1])}</div>`).join("")+
+    '<div class="rh">神煞</div>'+
+    cols4.map(([n])=>`<div style="font-size:11.5px;line-height:1.5">${(hit[n]||["—"]).join("<br>")}</div>`).join("")+
+    '</div>'+
+    `<p class="note">日柱 <b>${P.D.join("")}</b> 属 <b>甲${ZHI[(P.di-(P.di%10))%12]}</b> 旬，`+
+    `旬空 <b style="color:var(--cinnabar)">${kw.join("、")}</b>。`+
+    `神煞以<b>年支与日支</b>分别起，四柱见者标出；不同流派取用支不一，故标明来源。</p>`;
+
   // —— 流年细盘：所选大运的十个流年 ——
   const sel=R.seq[ST.sel];
   const birthY=y;

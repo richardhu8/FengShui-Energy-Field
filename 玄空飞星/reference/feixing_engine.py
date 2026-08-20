@@ -398,3 +398,41 @@ def year_ganzhi(year):
     """流年干支（以立春为界的年）"""
     i = (year - 4) % 60
     return GAN10[i % 10], ZHI12[i % 12]
+
+
+# ══════════ 纳音 · 神煞 ══════════
+NAYIN60 = ["海中金","炉中火","大林木","路旁土","剑锋金","山头火","涧下水","城头土","白蜡金","杨柳木",
+"泉中水","屋上土","霹雳火","松柏木","长流水","沙中金","山下火","平地木","壁上土","金箔金",
+"覆灯火","天河水","大驿土","钗钏金","桑柘木","大溪水","沙中土","天上火","石榴木","大海水"]
+
+def gz_index(gan, zhi):
+    gi, zi = GAN10.index(gan), ZHI12.index(zhi)
+    for i in range(60):
+        if i % 10 == gi and i % 12 == zi: return i
+    raise ValueError((gan, zhi))
+
+def nayin(gan, zhi):
+    return NAYIN60[gz_index(gan, zhi) // 2]
+
+SANHE = {("申","子","辰"):"壬", ("亥","卯","未"):"甲",
+         ("寅","午","戌"):"丙", ("巳","酉","丑"):"庚"}
+def _he_gan(zhi):
+    for k, g in SANHE.items():
+        if zhi in k: return g
+    raise ValueError(zhi)
+def _stage_zhi(gan, stage):
+    return next(z for z in ZHI12 if changsheng(gan, z) == stage)
+def _chong(z):
+    return ZHI12[(ZHI12.index(z)+6) % 12]
+
+def shensha(ref_zhi):
+    """由三合局阳干的十二长生推出四神煞所在支（非查表）"""
+    g = _he_gan(ref_zhi)
+    return {"桃花": _stage_zhi(g,"沐浴"), "将星": _stage_zhi(g,"帝旺"),
+            "华盖": _stage_zhi(g,"墓"),   "驿马": _chong(_stage_zhi(g,"长生"))}
+
+def kongwang(day_cycle_index):
+    """旬空：由日柱在六十甲子中的旬推出"""
+    head = day_cycle_index - (day_cycle_index % 10)
+    hz = head % 12
+    return ZHI12[(hz+10) % 12], ZHI12[(hz+11) % 12]
