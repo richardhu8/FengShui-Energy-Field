@@ -73,6 +73,7 @@ input[type=range]{padding:0;background:none;border:none;accent-color:var(--cinna
 .kv b{font-weight:600;font-variant-numeric:tabular-nums}
 
 .stage{display:flex;flex-direction:column;gap:22px}
+.stagewrap{position:relative}
 .plate-wrap{display:grid;grid-template-columns:minmax(240px,320px) 1fr;gap:20px;padding:18px}
 @media(max-width:760px){.plate-wrap{grid-template-columns:1fr}}
 svg.compass{width:100%;height:auto;display:block;cursor:grab;touch-action:none}
@@ -230,16 +231,32 @@ header .sub{display:none}
   </div>
 
   <div class="stage">
-    <div class="card plate-wrap">
+    <div class="card stagewrap">
+      <div class="plate-wrap" style="padding:0">
       <div>
         <svg class="compass" id="compass" viewBox="0 0 320 320" role="img" aria-label="二十四山罗盘，红线为坐向轴"></svg>
+        <div class="seg" style="margin-top:8px" role="group" aria-label="罗盘内环">
+          <button data-ring="gong" aria-pressed="true">八宫</button>
+          <button data-ring="hou">后天</button>
+          <button data-ring="xian">先天</button>
+          <button data-ring="luo">洛书</button>
+          <button data-ring="he">河图</button>
+        </div>
         <p style="font-size:11px;color:var(--ink-3);text-align:center;margin:8px 0 0">
           二十四山定位盘 · 上北 · <span style="color:var(--cinnabar)">红线</span>为当前坐向轴
         </p>
       </div>
       <div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <svg id="rose" viewBox="0 0 44 44" style="width:38px;height:38px;flex:none"></svg>
+          <div style="font-size:11.5px;color:var(--ink-3);line-height:1.4">
+            <b id="roseTxt" style="color:var(--ink-2);font-size:12.5px">上南下北</b><br>
+            <span id="roseSub">左东右西 · 传统罗盘取向</span>
+          </div>
+        </div>
         <div class="grid9" id="grid9"></div>
         <p style="font-size:11px;color:var(--ink-3);margin:8px 0 0" id="legend"></p>
+      </div>
       </div>
     </div>
     <div class="card planwrap">
@@ -346,6 +363,15 @@ const GAN="甲乙丙丁戊己庚辛壬癸",ZHI="子丑寅卯辰巳午未申酉�
 const GUA={1:["坎","水","东四"],2:["坤","土","西四"],3:["震","木","东四"],4:["巽","木","东四"],
            6:["乾","金","西四"],7:["兑","金","西四"],8:["艮","土","西四"],9:["离","火","东四"]};
 const XIAGUA=4.5;
+// 八卦：卦象符号、卦名、后天方位角、先天方位角
+const BAGUA=[
+  {sym:"☰",name:"乾",hou:315,xian:180},{sym:"☱",name:"兑",hou:270,xian:135},
+  {sym:"☲",name:"离",hou:180,xian: 90},{sym:"☳",name:"震",hou: 90,xian: 45},
+  {sym:"☴",name:"巽",hou:135,xian:225},{sym:"☵",name:"坎",hou:  0,xian:270},
+  {sym:"☶",name:"艮",hou: 45,xian:315},{sym:"☷",name:"坤",hou:225,xian:  0}];
+// 洛书 / 河图 数
+const LUOSHU={1:0,8:45,3:90,4:135,9:180,2:225,7:270,6:315};
+const HETU=[{n:"一六",dir:0},{n:"三八",dir:90},{n:"二七",dir:180},{n:"四九",dir:270},{n:"五十",dir:-1}];
 // ── 八宅明镜：游年变爻法推导（不用现成表）──
 // 三爻 (初,二,三)=(下,中,上)，1=阳 0=阴
 const YAO={1:[0,1,0],2:[0,0,0],3:[1,0,0],4:[0,1,1],6:[1,1,1],7:[1,1,0],8:[0,0,1],9:[1,0,1]};
@@ -710,7 +736,7 @@ function detectPlan(){
 
 /* ═══════ 状态 ═══════ */
 const $=id=>document.getElementById(id);
-let ST={deg:209.5,yun:9,date:"2026-08-17",time:"12:00",up:"S",method:"J",showImg:true,
+let ST={deg:209.5,yun:9,date:"2026-08-17",time:"12:00",up:"S",method:"J",showImg:true,ring:"gong",
         plan:PLAN_L.map(p=>p.slice())};
 
 /* ═══════ 罗盘 ═══════ */
@@ -734,14 +760,33 @@ function drawCompass(P){
       fill:on?"#F0D9A0":"var(--brass)","font-weight":on?700:400});
     t.textContent=m[0];s.appendChild(t);
   });
-  // 八宫内环
+  // ── 内层环：按 ST.ring 切换 ──
   s.appendChild(el("circle",{cx,cy,r:104,fill:"none",stroke:"rgba(201,162,74,.45)","stroke-width":.8}));
-  [[1,0],[8,45],[3,90],[4,135],[9,180],[2,225],[7,270],[6,315]].forEach(([g,a])=>{
+  const put=(a,txt,size,fill,rad)=>{
     const r=(a-90)*Math.PI/180;
-    const t=el("text",{x:cx+86*Math.cos(r),y:cy+86*Math.sin(r),"text-anchor":"middle","dominant-baseline":"central",
-      "font-size":11,"font-family":'"Songti SC","STSong",SimSun,serif',fill:"rgba(201,162,74,.75)"});
-    t.textContent=PG[g][0];s.appendChild(t);
-  });
+    const t=el("text",{x:cx+rad*Math.cos(r),y:cy+rad*Math.sin(r),"text-anchor":"middle",
+      "dominant-baseline":"central","font-size":size,
+      "font-family":'"Songti SC","STSong",SimSun,serif',fill});
+    t.textContent=txt;s.appendChild(t);
+  };
+  if(ST.ring==="gong"){
+    [[1,0],[8,45],[3,90],[4,135],[9,180],[2,225],[7,270],[6,315]].forEach(([g,a])=>
+      put(a,PG[g][0],11,"rgba(201,162,74,.75)",86));
+  }else if(ST.ring==="hou"||ST.ring==="xian"){
+    const key=ST.ring==="hou"?"hou":"xian";
+    BAGUA.forEach(b=>{
+      put(b[key],b.sym,17,"rgba(201,162,74,.9)",92);
+      put(b[key],b.name,9.5,"rgba(201,162,74,.6)",73);
+    });
+  }else if(ST.ring==="luo"){
+    Object.keys(LUOSHU).map(Number).forEach(n=>{
+      put(LUOSHU[n],String(n),15,n===5?"var(--cinnabar)":"rgba(201,162,74,.85)",88);
+    });
+    put(0,"5",15,"rgba(201,162,74,.5)",0);
+  }else if(ST.ring==="he"){
+    HETU.forEach(h=>{ if(h.dir<0)put(0,h.n,11,"rgba(201,162,74,.5)",0);
+                      else put(h.dir,h.n,12,"rgba(201,162,74,.85)",88); });
+  }
   // 度刻
   for(let d=0;d<360;d+=5){const r=(d-90)*Math.PI/180,L=d%15===0?10:5;
     s.appendChild(el("line",{x1:cx+150*Math.cos(r),y1:cy+150*Math.sin(r),
@@ -920,6 +965,31 @@ function bindPlan(){
   };
 }
 
+
+function drawRose(){
+  const s=$("rose"); if(!s)return; s.textContent="";
+  const S=ST.up==="S";                       // 上南下北
+  const cx=22,cy=22;
+  s.appendChild(el("circle",{cx,cy,r:20,fill:"var(--panel-2)",stroke:"var(--edge)","stroke-width":1}));
+  const marks=S?[["南",0],["北",180],["东",270],["西",90]]
+               :[["北",0],["南",180],["西",270],["东",90]];
+  marks.forEach(([nm,a])=>{
+    const r=(a-90)*Math.PI/180;
+    const t=el("text",{x:cx+13*Math.cos(r),y:cy+13*Math.sin(r),"text-anchor":"middle",
+      "dominant-baseline":"central","font-size":9,
+      "font-family":'"Songti SC","STSong",SimSun,serif',
+      fill:nm==="北"?"var(--cinnabar)":"var(--ink-3)"});
+    t.textContent=nm;s.appendChild(t);
+  });
+  // 指针恒指「北」所在的屏幕方向
+  const na=S?180:0, r=(na-90)*Math.PI/180;
+  s.appendChild(el("line",{x1:cx,y1:cy,x2:cx+15*Math.cos(r),y2:cy+15*Math.sin(r),
+    stroke:"var(--cinnabar)","stroke-width":1.6}));
+  s.appendChild(el("circle",{cx,cy,r:2,fill:"var(--brass)"}));
+  $("roseTxt").textContent=S?"上南下北":"上北下南";
+  $("roseSub").textContent=S?"左东右西 · 传统罗盘取向":"左西右东 · 地图取向";
+}
+
 /* ═══════ 渲染 ═══════ */
 function render(){
   const P=pan(ST.yun,ST.deg);
@@ -938,7 +1008,7 @@ function render(){
 
   const zhai=P.S[1], BZ=bazhai(zhai);
   const A=ST.method==='R'?radialAnalyze(ST.plan):planAnalyze(ST.plan);
-  drawCompass(P);drawGrid(P,Z,BZ);drawPlan(P,BZ,A);
+  drawCompass(P);drawGrid(P,Z,BZ);drawPlan(P,BZ,A);drawRose();
 
   // 覆盖率条
   const order=[6,1,8,7,3,2,9,4];   // 八方，跳过中宫
@@ -1259,6 +1329,12 @@ function gyroStop(){
   if(!AI_ENDPOINT)$("aiFoot").innerHTML=
     '本页未配置后端，AI 解读不可用。自建部署时在页面里设 '+
     '<code style="background:var(--panel-2);padding:0 3px">window.FENGSHUI_AI_ENDPOINT</code>（见 api/ 目录）。';
+  document.querySelectorAll('[data-ring]').forEach(b=>b.addEventListener("click",()=>{
+    ST.ring=b.getAttribute("data-ring");
+    document.querySelectorAll('[data-ring]').forEach(x=>
+      x.setAttribute("aria-pressed",x===b?"true":"false"));
+    render();
+  }));
   bindCompass();bindPlan();render();
   // bfcache（前进/后退）恢复后，表单值可能被浏览器改写，重新同步一次
   window.addEventListener("pageshow",e=>{if(e.persisted){
