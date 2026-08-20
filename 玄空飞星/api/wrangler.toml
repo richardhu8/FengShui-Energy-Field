@@ -1,0 +1,15 @@
+name = "fengshui-ai"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+
+# 限流用 KV（可选；不绑定则不限流）
+# 先建：wrangler kv namespace create RATE_KV
+# 再把返回的 id 填进来并取消注释：
+# [[kv_namespaces]]
+# binding = "RATE_KV"
+# id = "<你的 namespace id>"
+
+[vars]
+# 允许的前端来源，逗号分隔；生产环境务必收紧，别留 *
+ALLOW_ORIGIN = "*"

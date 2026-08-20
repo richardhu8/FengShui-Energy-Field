@@ -259,6 +259,24 @@ footer code{background:var(--panel-2);padding:1px 4px;border-radius:2px}
       </div>
     </div>
 
+    <div class="card" id="aiCard">
+      <div class="pad" style="padding:14px 18px">
+        <h2 style="margin:0 0 2px;font-size:13px;letter-spacing:.14em;font-weight:600;
+            font-family:'Songti SC','STSong',SimSun,serif">AI 堪舆师</h2>
+        <p style="margin:0 0 10px;font-size:11.5px;color:var(--ink-3)" id="aiHint">
+          把当前盘面数据交给 Claude 解读 —— 数字由本页引擎算出，模型只负责翻译成居住建议，不自行重算。</p>
+        <div id="aiLog" style="max-height:260px;overflow-y:auto;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <input id="aiQ" type="text" placeholder="例如：主卧放哪间比较好？"
+            style="flex:1" maxlength="200">
+          <button id="aiSend" style="font:inherit;font-size:12px;padding:6px 14px;
+            background:var(--brass);color:var(--lacquer);border:none;border-radius:2px;
+            cursor:pointer;font-weight:600;white-space:nowrap">发送</button>
+        </div>
+        <p style="margin:8px 0 0;font-size:11px;color:var(--ink-3)" id="aiFoot"></p>
+      </div>
+    </div>
+
     <div class="card">
       <div class="verdict">
         <span class="ge" id="ge">双星到向</span>
@@ -990,6 +1008,77 @@ function render(){
       localStorage.setItem("fs_yun",ST.yun);}catch(e){}
 }
 
+
+/* ═══════ AI 堪舆师 ═══════ */
+// 后端地址：自建部署时改成你的 Worker 域名。留空则功能不可用（如 Artifact 托管版）。
+const AI_ENDPOINT = (window.FENGSHUI_AI_ENDPOINT || "").trim();
+let aiHist=[], aiBusy=false;
+
+function aiContext(){
+  // 只喂已算出的、可复核的盘面事实，不喂推测
+  const P=pan(ST.yun,ST.deg), BZ=bazhai(P.S[1]);
+  const A=ST.method==="R"?radialAnalyze(ST.plan):planAnalyze(ST.plan);
+  const[y,m,d]=ST.date.split("-").map(Number), [hh,mm]=ST.time.split(":").map(Number);
+  const Z=ziba(y,m,d,hh+mm/60); const yp=fly(Z.nian,true);
+  const L=[];
+  L.push(`坐向：${P.S[0]}山${P.F[0]}向（向首 ${norm(ST.deg).toFixed(1)}°，${P.xiagua?"下卦":"替卦"}）`);
+  L.push(`元运：${ST.yun}运　格局：${P.ge}`);
+  L.push(`宅卦：${PG[P.S[1]][0]}宅（坐${PG[P.S[1]][1]}）`);
+  L.push(`四柱：${Z.P.Y} ${Z.P.Mo} ${Z.P.D} ${Z.P.H}（北京时间 ${ST.date} ${ST.time}）`);
+  L.push(`流年中宫 ${Z.nian}、流月 ${Z.yue}、流日 ${Z.ri}、流时 ${Z.shi}`);
+  L.push("");
+  L.push("各宫（山星/向星/运盘/流年/八宅/户型覆盖率）：");
+  [6,1,8,7,5,3,2,9,4].forEach(g=>{
+    const cov=A.cov[g]!==undefined?Math.round(A.cov[g]*100)+"%":"—";
+    L.push(`  ${PG[g][0]}宫(${PG[g][1]})：山${P.sp[g]} 向${P.xp[g]} 运${P.yp[g]} 年${yp[g]}`+
+           `${BZ&&BZ[g]?" 八宅"+BZ[g]:""} 覆盖${cov}`);
+  });
+  L.push("");
+  L.push(`当运旺星 ${ST.yun}，生气 ${ST.yun%9+1}；5 为五黄、2 为二黑，属凶星。`);
+  L.push(`户型分宫法：${ST.method==="R"?"中心放射法":"井字法"}；覆盖率 <60% 记为缺角。`);
+  return L.join("\n");
+}
+function aiBubble(role,text){
+  const d=document.createElement("div");
+  d.style.cssText="margin:6px 0;font-size:12.5px;line-height:1.65";
+  const who=role==="user"?"你":"堪舆师";
+  const col=role==="user"?"var(--ink-3)":"var(--brass)";
+  d.innerHTML=`<b style="color:${col}">${who}</b>　<span></span>`;
+  d.lastChild.textContent=text;
+  $("aiLog").appendChild(d); $("aiLog").scrollTop=$("aiLog").scrollHeight;
+  return d.lastChild;
+}
+async function aiSend(){
+  if(aiBusy)return;
+  const q=$("aiQ").value.trim(); if(!q)return;
+  if(!AI_ENDPOINT){
+    $("aiFoot").innerHTML='<span style="color:var(--cinnabar)">未配置后端</span> —— '+
+      '此功能需自建部署（见 api/ 目录）。Artifact 托管版受 CSP 限制无法外呼。';
+    return;
+  }
+  $("aiQ").value=""; aiBubble("user",q);
+  aiHist.push({role:"user",content:q});
+  const slot=aiBubble("assistant","思考中…");
+  aiBusy=true; $("aiSend").disabled=true;
+  const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),45000);
+  try{
+    const r=await fetch(AI_ENDPOINT,{method:"POST",
+      headers:{"Content-Type":"application/json"},signal:ctl.signal,
+      body:JSON.stringify({messages:aiHist,context:aiContext()})});
+    const ct=(r.headers.get("content-type")||"").toLowerCase();
+    if(ct.indexOf("application/json")<0)throw new Error("服务返回了非 JSON 内容");
+    const j=await r.json();
+    if(!r.ok||j.error){ slot.textContent=j.message||("请求失败 "+r.status); }
+    else{
+      slot.textContent=j.reply;
+      aiHist.push({role:"assistant",content:j.reply});
+      if(typeof j.left==="number")$("aiFoot").textContent=`今日剩余 ${j.left} 次`;
+    }
+  }catch(e){
+    slot.textContent=e.name==="AbortError"?"请求超时":("出错："+e.message);
+  }finally{ clearTimeout(t); aiBusy=false; $("aiSend").disabled=false; }
+}
+
 /* ═══════ 绑定 ═══════ */
 (function init(){
   // 与炁流场页共享：优先采用已保存的户型与坐向
@@ -1042,6 +1131,11 @@ function render(){
     $("toggleImg").textContent=ST.showImg?"隐藏底图":"显示底图";render();});
   $("dropImg").addEventListener("click",()=>{BACKDROP=null;$("upTune").style.display="none";
     $("upState").textContent="";render();});
+  $("aiSend").addEventListener("click",aiSend);
+  $("aiQ").addEventListener("keydown",e=>{if(e.key==="Enter")aiSend();});
+  if(!AI_ENDPOINT)$("aiFoot").innerHTML=
+    '本页未配置后端，AI 解读不可用。自建部署时在页面里设 '+
+    '<code style="background:var(--panel-2);padding:0 3px">window.FENGSHUI_AI_ENDPOINT</code>（见 api/ 目录）。';
   bindCompass();bindPlan();render();
   // bfcache（前进/后退）恢复后，表单值可能被浏览器改写，重新同步一次
   window.addEventListener("pageshow",e=>{if(e.persisted){
