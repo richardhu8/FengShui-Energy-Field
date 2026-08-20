@@ -1,0 +1,268 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>寻炁拆解与对策</title>
+<style>
+:root{
+  --ground:#E7E1D2; --panel:#F3EEE2; --panel-2:#EAE4D5; --edge:#CFC5AC;
+  --ink:#17130F; --ink-2:#4A4136; --ink-3:#7C7161;
+  --brass:#8A6A1F; --cinnabar:#AE3527; --jade:#3D6A57;
+  --lacquer:#14120E; --lacquer-ink:#E8E1CE;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#100E0B; --panel:#191712; --panel-2:#211E18; --edge:#332E24;
+    --ink:#E9E2CF; --ink-2:#B3A992; --ink-3:#7E7562;
+    --brass:#C9A24A; --cinnabar:#CE5041; --jade:#6BA189;
+    --lacquer:#0B0A08; --lacquer-ink:#E9E2CF;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#100E0B; --panel:#191712; --panel-2:#211E18; --edge:#332E24;
+  --ink:#E9E2CF; --ink-2:#B3A992; --ink-3:#7E7562;
+  --brass:#C9A24A; --cinnabar:#CE5041; --jade:#6BA189;
+  --lacquer:#0B0A08; --lacquer-ink:#E9E2CF;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased}
+.serif{font-family:"Songti SC","STSong","Source Han Serif SC",SimSun,serif}
+code,.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.88em;
+  background:var(--panel-2);padding:1px 5px;border-radius:2px;font-variant-numeric:tabular-nums}
+
+header{background:var(--lacquer);color:var(--lacquer-ink);padding:34px 24px 30px;
+  border-bottom:2px solid var(--brass)}
+header .in{max-width:860px;margin:0 auto}
+header .eyebrow{font-size:11.5px;letter-spacing:.24em;color:var(--brass);text-transform:uppercase}
+header h1{font-family:"Songti SC","STSong",SimSun,serif;font-size:32px;margin:8px 0 6px;
+  letter-spacing:.06em;font-weight:600;text-wrap:balance}
+header p{margin:0;color:#9A8F78;font-size:13.5px;max-width:62ch}
+
+main{max-width:860px;margin:0 auto;padding:34px 24px 80px}
+section{margin:0 0 40px}
+h2{font-family:"Songti SC","STSong",SimSun,serif;font-size:21px;letter-spacing:.05em;
+  margin:0 0 4px;padding-bottom:8px;border-bottom:1px solid var(--edge);text-wrap:balance}
+h2 .n{color:var(--brass);font-size:14px;margin-right:10px;font-variant-numeric:tabular-nums}
+h3{font-size:15px;margin:24px 0 6px;letter-spacing:.03em}
+p{margin:10px 0}
+ul{margin:8px 0;padding-left:20px}
+li{margin:5px 0}
+
+.lede{font-size:16px;color:var(--ink-2);border-left:3px solid var(--brass);
+  padding:2px 0 2px 16px;margin:16px 0 24px}
+.tablewrap{overflow-x:auto;margin:14px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:460px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--edge);vertical-align:top}
+th{color:var(--ink-3);font-weight:600;font-size:12px;letter-spacing:.08em;
+  border-bottom:1.5px solid var(--edge)}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:3px;padding:16px 18px;margin:16px 0}
+.card h4{margin:0 0 8px;font-size:14px;letter-spacing:.04em}
+.flag{border-left:3px solid var(--cinnabar);background:color-mix(in srgb,var(--cinnabar) 7%,transparent)}
+.good{border-left:3px solid var(--jade);background:color-mix(in srgb,var(--jade) 7%,transparent)}
+.warn{border-left:3px solid var(--brass);background:color-mix(in srgb,var(--brass) 8%,transparent)}
+.t-cin{color:var(--cinnabar)} .t-jade{color:var(--jade)} .t-brass{color:var(--brass)}
+
+.stack{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin:14px 0}
+.chip{background:var(--panel-2);border:1px solid var(--edge);border-radius:2px;padding:9px 11px}
+.chip .k{font-size:11px;color:var(--ink-3);letter-spacing:.1em}
+.chip .v{font-size:13.5px;margin-top:2px}
+
+ol.phases{list-style:none;padding:0;counter-reset:ph}
+ol.phases>li{counter-increment:ph;background:var(--panel);border:1px solid var(--edge);
+  border-radius:3px;padding:14px 16px 14px 52px;position:relative;margin:10px 0}
+ol.phases>li::before{content:counter(ph);position:absolute;left:16px;top:13px;
+  font-family:"Songti SC","STSong",SimSun,serif;font-size:20px;color:var(--brass)}
+ol.phases b{display:block;margin-bottom:3px}
+.meta{font-size:12px;color:var(--ink-3)}
+
+footer{border-top:1px solid var(--edge);margin-top:10px;padding-top:16px;
+  font-size:12px;color:var(--ink-3)}
+
+nav.site{display:flex;gap:2px;margin-left:auto;align-items:center;flex-wrap:wrap}
+nav.site a{font-size:11.5px;letter-spacing:.1em;color:#9A8F78;text-decoration:none;
+  padding:4px 10px;border-radius:2px;white-space:nowrap}
+nav.site a:hover{color:var(--brass)}
+nav.site a[aria-current="page"]{color:var(--lacquer);background:var(--brass);font-weight:600}
+header .sub{display:none}
+</style>
+
+<header><div class="in">
+  <div class="eyebrow">竞品技术拆解 · 2026-08-20</div>
+  <h1 class="serif">寻炁拆解与对策</h1>
+  <p>xunq.chat 是什么、怎么搭的、哪些难哪些不难，以及我们手上已有的牌该怎么打。</p>
+</div><nav class="site"><a href="./">门户</a><a href="paipan.html">排盘</a><a href="qiflow.html">炁流场</a><a href="research.html" aria-current="page">竞品拆解</a></nav></header>
+
+<main>
+
+<section>
+  <p class="lede">一句话结论：<b>它的 3D 可视化确实领先，但底层术数引擎比我们弱得多</b>——
+  它的九星排盘在自己的代码注释里写着「简化排盘」，只飞一颗星，没有山星向星。
+  我们该抄的是它的<b>呈现方式</b>，不是它的<b>算法</b>。</p>
+</section>
+
+<section>
+  <h2><span class="n">01</span>产品版图</h2>
+  <p>落地页是一张可交互星图，每颗星一个工具，分三类。目前 6 个已开放、5 个开发中。</p>
+  <div class="tablewrap"><table>
+    <tr><th>分类</th><th>已开放</th><th>开发中</th></tr>
+    <tr><td><b>境</b> 空间</td><td>堪舆（2D 户型）、寻炁3D</td><td>福茔</td></tr>
+    <tr><td><b>时</b> 命时</td><td>命书（八字）</td><td>卜筮、奇门、星运</td></tr>
+    <tr><td><b>象</b> 万象</td><td>蛊、真灵神谱</td><td>人体经络</td></tr>
+  </table></div>
+  <p>页面体量能看出投入分布——<b>命书 1.34 MB 是最重的一个</b>，比 3D 那页还大一倍多：</p>
+  <div class="tablewrap"><table>
+    <tr><th>页面</th><th class="num">体积</th><th>说明</th></tr>
+    <tr><td><code>/mingshu</code></td><td class="num">1,335 KB</td><td>八字排盘，投入最大</td></tr>
+    <tr><td><code>/xunqi</code></td><td class="num">503 KB</td><td>3D 炁场，技术含量最高</td></tr>
+    <tr><td><code>/kanyu</code></td><td class="num">306 KB</td><td>2D 户型分析</td></tr>
+    <tr><td><code>/</code></td><td class="num">84 KB</td><td>星图落地页</td></tr>
+    <tr><td><code>/zhenling</code> · <code>/gu</code></td><td class="num">5 KB · 0.5 KB</td><td>基本是占位</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="n">02</span>技术栈：比想象的朴素得多</h2>
+  <div class="stack">
+    <div class="chip"><div class="k">框架</div><div class="v">无。纯 vanilla JS</div></div>
+    <div class="chip"><div class="k">构建</div><div class="v">无。不打包不编译</div></div>
+    <div class="chip"><div class="k">3D</div><div class="v">Three.js r149</div></div>
+    <div class="chip"><div class="k">地图</div><div class="v">Leaflet + maplibre-gl</div></div>
+    <div class="chip"><div class="k">底图</div><div class="v">高德瓦片 + OSM 地理编码</div></div>
+    <div class="chip"><div class="k">托管</div><div class="v">nginx 1.24 / Ubuntu VPS</div></div>
+    <div class="chip"><div class="k">存储</div><div class="v">仅 localStorage</div></div>
+    <div class="chip"><div class="k">变现</div><div class="v">Google AdSense</div></div>
+  </div>
+  <p><code>/xunqi/</code> 那页是 <b>464 KB 的单个 HTML，其中 380 KB 是内联 &lt;script&gt;</b>。
+  自有 JS 文件只有三个：<code>three.min.js</code>、<code>walls.js</code>、<code>stars.js</code>。</p>
+  <div class="card good">
+    <h4 class="t-jade">这对我们是好消息</h4>
+    <p style="margin:0">它的工程复杂度很低——和我们现在的单文件 HTML 是<b>同一种做法</b>，只是规模大。
+    没有 React/Vue/构建链要追赶，不存在「技术栈代差」。难的是内容量和 3D 效果，不是架构。</p>
+  </div>
+</section>
+
+<section>
+  <h2><span class="n">03</span>后端只有一个接口</h2>
+  <p>全站唯一的服务端调用是 <code>POST /api/chat</code>——AI 堪舆师的 LLM 代理：</p>
+  <ul>
+    <li>请求体 <code>{messages: 最近8条, context: 当前盘面摘要, image?: 截图}</code></li>
+    <li>30 秒超时 + AbortController + JSON content-type 校验（代码注释显示是踩过网关错误页的坑后补的）</li>
+    <li>限流：每个匿名浏览器<b>每天 3 次</b>；带图提问默认关闭</li>
+  </ul>
+  <p>命书另有一个 <code>/mingshu-api/feedback</code>，看名字只是反馈收集。
+  <b>没有账号系统、没有数据库、盘面状态只存 localStorage。</b></p>
+</section>
+
+<section>
+  <h2><span class="n">04</span>三个「看起来很难」的功能，实际怎么做的</h2>
+
+  <h3>① 户型图上传 → 墙体识别</h3>
+  <p>我一开始以为用了 OpenCV，<b>查证后是我看错了</b>（代码里的 <code>cv</code> 只是 canvas 变量名）。
+  实际是<b>手写的像素管线</b>，函数名可见：</p>
+  <p><code>analyzeWalls</code> · <code>buildWallEvidence</code> · <code>cleanWallGrid</code> ·
+     <code>despeckleWall</code> · <code>appendDiagonalWalls</code> · <code>countWallCells</code></p>
+  <p>配合 <code>getImageData</code> + 阈值二值化 + 膨胀（dilate）+ 去噪，落成一张网格。
+  没有机器学习。而且界面明说「上传后请核对红色墙线；不准可用直线/画笔修正」——
+  <b>识别不保证准确，靠人工兜底</b>。默认演示场景 <code>walls.js</code> 干脆是一张写死的 192×117 位图。</p>
+  <div class="card"><p style="margin:0"><b>可复制性：高。</b>阈值+形态学是标准图像处理，
+  不需要 ML。真正的工作量在交互修正工具（直线/画笔/吸附）上。</p></div>
+
+  <h3>② 3D 炁流场</h3>
+  <p>Three.js + WebGL2。控制台暴露的参数说明了模型：主炁口朝向、扩散角度、炁速、
+  能量强度、粒子寿命、增加炁口/出口。本质是<b>从入口发射、受墙体阻挡的粒子/热力场</b>，
+  再把九宫标签立在 3D 空间里。还叠了潮汐、月相、星图。</p>
+  <div class="card warn"><p style="margin:0"><b>可复制性：中等偏难。</b>
+  这是它唯一真正的技术护城河。不是算法难，是<b>调参和美术</b>难——
+  要让流场看起来「像那么回事」需要大量视觉打磨。</p></div>
+
+  <h3>③ 实景罗盘（陀螺仪）</h3>
+  <p>浏览器 <code>DeviceOrientation</code> API。iOS 需要用户手势授权 + HTTPS。</p>
+  <div class="card"><p style="margin:0"><b>可复制性：高。</b>几十行代码，坑主要在 iOS 权限和磁偏角校正。</p></div>
+</section>
+
+<section>
+  <h2><span class="n">05</span>它的软肋：术数引擎</h2>
+  <p>这是这次拆解<b>最有价值的发现</b>。它的 <code>stars.js</code> 只有 3.8 KB，文件头自己写着
+  「玄空九星（时家紫白·<b>阳顺简化排盘</b>）」。看代码：</p>
+
+  <div class="card flag">
+    <h4 class="t-cin">问题一：时家紫白是假的</h4>
+    <p style="margin:0"><code>starOfHour(i) = (i % 9) + 1</code>——「子时一白起，逐时辰顺行」。
+    真正的时家紫白要按<b>日支分三组</b>、再分<b>冬至后阳遁顺行 / 夏至后阴遁逆行</b>。
+    我们的引擎实现了完整规则，并与抖音那套 App 实测对上（流时中宫 6 白）。</p>
+  </div>
+
+  <div class="card flag">
+    <h4 class="t-cin">问题二：没有山星向星</h4>
+    <p style="margin:0">它只把<b>一颗</b>星（年星或时星）入中宫顺飞，得到一张九宫。
+    但玄空飞星的核心是<b>依坐向排山盘 + 向盘双星</b>——这才有旺山旺向、双星到向、上山下水的格局判断。
+    它这套严格说只是<b>紫白飞星</b>，不是玄空飞星。</p>
+  </div>
+
+  <div class="card flag">
+    <h4 class="t-cin">问题三：时区口径自相矛盾（已实测复现）</h4>
+    <p style="margin:0">同一时刻，<code>/kanyu/</code> 显示时柱 <b>乙未</b>，<code>/xunqi/</code> 显示 <b>己丑</b>。
+    我用我们的引擎两种都复现了：按北京时间算得乙未、按浏览器本地时间算得己丑——
+    <b>一个模块用北京时间、另一个用本地时间</b>。海外用户看到的时柱是错的。</p>
+  </div>
+
+  <p>它做对的部分也要说清楚：<b>流年紫白公式正确</b>（<code>(11-year%9)%9</code>，2026→一白，与我们一致），
+  洛书飞泊路径也正确。九星的 <code>luck</code> 数值（1.00 / 0.15 / 0.05…）是<b>为可视化设计的启发式权重</b>，
+  不是传统定数——用来驱动能量强度合理，但不该当断语。</p>
+
+  <div class="tablewrap"><table>
+    <tr><th>能力</th><th>寻炁</th><th>我们</th></tr>
+    <tr><td>流年紫白</td><td>✅ 正确</td><td>✅ 正确</td></tr>
+    <tr><td>时家紫白</td><td class="t-cin">简化（自称）</td><td class="t-jade">完整规则，实测对上</td></tr>
+    <tr><td>山星 / 向星双盘</td><td class="t-cin">无</td><td class="t-jade">有，36/36 逐格校验</td></tr>
+    <tr><td>替卦起星</td><td class="t-cin">未见</td><td class="t-jade">有，两张真盘 54/54 全同</td></tr>
+    <tr><td>八宅游年</td><td>有图层（未验证）</td><td class="t-jade">变爻法推导，与经典全同</td></tr>
+    <tr><td>缺角分析</td><td>未见量化</td><td class="t-jade">两派分宫法 + 面积守恒验证</td></tr>
+    <tr><td>算法透明度</td><td class="t-cin">无规格文档</td><td class="t-jade">规格 + 1229 条测试 + 5 处勘误</td></tr>
+    <tr><td>3D 炁场</td><td class="t-jade">强</td><td class="t-cin">无</td></tr>
+    <tr><td>AI 解读</td><td class="t-jade">有</td><td class="t-cin">无</td></tr>
+    <tr><td>八字 / 命书</td><td class="t-jade">有（1.3 MB）</td><td class="t-cin">无</td></tr>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="n">06</span>建议路线</h2>
+  <p>不要正面复刻。它领先的是<b>广度和视觉</b>，我们领先的是<b>正确性和可验证性</b>——
+  在术数产品里，「算得对」是可以做成卖点的，因为用户根本没法自己检验。</p>
+
+  <ol class="phases">
+    <li><b>把已有引擎的优势显性化</b>
+      <div class="meta">成本低、见效快。在页面上直接展示「与 N 个独立实现逐格校验」的证据，
+      公开算法规格与测试。这是它给不出的东西。</div></li>
+    <li><b>补户型图上传 + 墙体识别</b>
+      <div class="meta">阈值二值化 + 形态学 + 人工修正工具。我们已有多边形编辑器和缺角分析，
+      上传只是把「手动画」换成「自动描 + 手动修」。技术风险低。</div></li>
+    <li><b>补 AI 解读</b>
+      <div class="meta">一个 <code>/api/chat</code> 代理即可，参考它的做法：带盘面 context、
+      限流、超时保护。我们的优势是能把<b>可验证的盘面数据</b>喂给模型，而不是让模型瞎编。</div></li>
+    <li><b>再考虑 3D</b>
+      <div class="meta">Three.js 粒子流场。这是投入最大的一块，建议放在有真实用户反馈之后，
+      不要一上来就啃。</div></li>
+  </ol>
+
+  <div class="card warn">
+    <h4 class="t-brass">两个要提前想清楚的问题</h4>
+    <ul style="margin:0">
+      <li><b>合规</b>：它挂了 AdSense、写「仅供传统文化参考」、AI 回答有免责声明、
+      命书标题特意写「传统命理文化科普」。这套措辞是有意为之，我们也需要。</li>
+      <li><b>流派分歧</b>：它直接给「宅局综合评分」，但下卦/替卦分界、井字法vs放射法、
+      五入中阴阳这些差异会直接改变结论。我们目前的做法是两派都给、分歧如实列出——
+      这更诚实，但要想清楚普通用户是否买账。</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p>方法：公开页面与静态资源的架构分析（HTTP 头、脚本清单、公开 JS 逻辑、页面体量），
+  未做任何侵入性测试。术数结论均以我们已验证的引擎实算交叉比对。</p>
+  <p>标注为「未见 / 未验证」的项目表示本次未查到证据，不等于该功能不存在。</p>
+</footer>
+
+</main>

@@ -1,0 +1,547 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>炁流场</title>
+<style>
+:root{
+  --ground:#E7E1D2; --panel:#F3EEE2; --panel-2:#EAE4D5; --edge:#CFC5AC;
+  --ink:#17130F; --ink-2:#4A4136; --ink-3:#7C7161;
+  --brass:#8A6A1F; --cinnabar:#AE3527; --jade:#3D6A57;
+  --lacquer:#14120E; --lacquer-ink:#E8E1CE;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#100E0B; --panel:#191712; --panel-2:#211E18; --edge:#332E24;
+  --ink:#E9E2CF; --ink-2:#B3A992; --ink-3:#7E7562;
+  --brass:#C9A24A; --cinnabar:#CE5041; --jade:#6BA189;
+  --lacquer:#0B0A08; --lacquer-ink:#E9E2CF;}}
+:root[data-theme="dark"]{
+  --ground:#100E0B; --panel:#191712; --panel-2:#211E18; --edge:#332E24;
+  --ink:#E9E2CF; --ink-2:#B3A992; --ink-3:#7E7562;
+  --brass:#C9A24A; --cinnabar:#CE5041; --jade:#6BA189;
+  --lacquer:#0B0A08; --lacquer-ink:#E9E2CF;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.serif{font-family:"Songti SC","STSong","Source Han Serif SC",SimSun,serif}
+header{background:var(--lacquer);color:var(--lacquer-ink);padding:16px 22px;
+  display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;border-bottom:2px solid var(--brass)}
+header .mark{font-family:"Songti SC","STSong",SimSun,serif;font-size:19px;letter-spacing:.22em;color:var(--brass)}
+header .name{font-family:"Songti SC","STSong",SimSun,serif;font-size:16px;letter-spacing:.1em}
+header .sub{font-size:11px;letter-spacing:.16em;color:#9A8F78;margin-left:auto}
+main{max-width:1180px;margin:0 auto;padding:20px;
+  display:grid;grid-template-columns:1fr minmax(260px,300px);gap:18px;align-items:start}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:3px}
+canvas#view{width:100%;height:auto;display:block;background:var(--lacquer);
+  border-radius:3px;cursor:grab;touch-action:none}
+canvas#view:active{cursor:grabbing}
+.pad{padding:14px 16px}
+h2{margin:0 0 2px;font-size:13px;letter-spacing:.14em;font-weight:600;
+  font-family:"Songti SC","STSong",SimSun,serif}
+.hint{margin:0 0 12px;font-size:11.5px;color:var(--ink-3)}
+label{display:block;font-size:11.5px;color:var(--ink-3);letter-spacing:.08em;margin:10px 0 3px;
+  display:flex;justify-content:space-between}
+label b{color:var(--ink-2);font-variant-numeric:tabular-nums;font-weight:600}
+input[type=range]{width:100%;accent-color:var(--cinnabar);background:none;border:none;padding:0}
+select{width:100%;padding:6px 8px;background:var(--panel-2);color:var(--ink);
+  border:1px solid var(--edge);border-radius:2px;font:inherit}
+.seg{display:flex;border:1px solid var(--edge);border-radius:2px;overflow:hidden;margin-top:10px}
+.seg button{flex:1;padding:5px 0;font:inherit;font-size:11.5px;background:var(--panel-2);
+  color:var(--ink-3);border:none;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--brass);color:var(--lacquer);font-weight:600}
+.row{display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0}
+.row+.row{border-top:1px dotted var(--edge)}
+.row .nm{width:66px;color:var(--ink-3);flex:none}
+.bar{flex:1;height:7px;background:var(--edge);border-radius:1px;overflow:hidden}
+.bar i{display:block;height:100%}
+.row .pc{width:34px;text-align:right;font-variant-numeric:tabular-nums;flex:none}
+.tool{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.tool button{font:inherit;font-size:11.5px;padding:4px 10px;background:var(--panel-2);
+  color:var(--ink-2);border:1px solid var(--edge);border-radius:2px;cursor:pointer}
+.tool button:hover{border-color:var(--brass);color:var(--brass)}
+.note{font-size:11.5px;color:var(--ink-3);margin-top:10px}
+footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;font-size:11.5px;color:var(--ink-3)}
+
+nav.site{display:flex;gap:2px;margin-left:auto;align-items:center;flex-wrap:wrap}
+nav.site a{font-size:11.5px;letter-spacing:.1em;color:#9A8F78;text-decoration:none;
+  padding:4px 10px;border-radius:2px;white-space:nowrap}
+nav.site a:hover{color:var(--brass)}
+nav.site a[aria-current="page"]{color:var(--lacquer);background:var(--brass);font-weight:600}
+header .sub{display:none}
+</style>
+
+<header>
+  <span class="mark">炁流</span><span class="name">三维气场</span>
+  <span class="sub">QI FIELD · 粒子流场 · 零依赖软件渲染</span>
+<nav class="site"><a href="./">门户</a><a href="paipan.html">排盘</a><a href="qiflow.html" aria-current="page">炁流场</a><a href="research.html">竞品拆解</a></nav></header>
+
+<main>
+  <div class="card"><canvas id="view" width="1000" height="680"></canvas></div>
+
+  <div class="card pad">
+    <h2>坐向与元运</h2>
+    <p class="hint">与排盘页共享户型，改动自动同步</p>
+    <label for="deg">向首度数 <b id="degV">209.5°</b></label>
+    <input id="deg" type="range" min="0" max="359.9" step="0.5" value="209.5">
+    <label for="yun">元运 <b id="yunV">九运</b></label>
+    <input id="yun" type="range" min="1" max="9" step="1" value="9">
+    <div class="note" id="panInfo" style="margin-top:8px"></div>
+    <p style="margin:10px 0 0"><a id="toPan" href="paipan.html"
+       style="font-size:11.5px;color:var(--brass)">→ 到排盘页编辑户型轮廓</a></p>
+
+    <h2 style="margin-top:20px">炁口与流场</h2>
+    <p class="hint">拖动画面旋转视角，滚轮缩放</p>
+
+    <label for="ent">炁口方位 <b id="entV">北</b></label>
+    <select id="ent">
+      <option value="0">北（坎）</option><option value="45">东北（艮）</option>
+      <option value="90">东（震）</option><option value="135">东南（巽）</option>
+      <option value="180">南（离）</option><option value="225">西南（坤）</option>
+      <option value="270">西（兑）</option><option value="315">西北（乾）</option>
+    </select>
+
+    <label for="spd">炁速 <b id="spdV">1.6</b></label>
+    <input id="spd" type="range" min="0.4" max="3" step="0.1" value="1.6">
+
+    <label for="dif">扩散 <b id="difV">0.06</b></label>
+    <input id="dif" type="range" min="0" max="0.2" step="0.01" value="0.06">
+
+    <label for="cnt">粒子数 <b id="cntV">900</b></label>
+    <input id="cnt" type="range" min="200" max="2000" step="100" value="900">
+
+    <label for="hgt">层高 <b id="hgtV">70</b></label>
+    <input id="hgt" type="range" min="20" max="140" step="5" value="70">
+
+    <div class="seg" role="group" aria-label="显示">
+      <button id="mFlow" aria-pressed="true">炁流</button>
+      <button id="mHeat" aria-pressed="false">滞留热力</button>
+    </div>
+    <div class="tool">
+      <button id="pL">L 形户型</button>
+      <button id="pSq">方正户型</button>
+      <button id="pU">凹字户型</button>
+      <button id="reset">重置视角</button>
+    </div>
+
+    <h2 style="margin-top:20px">各宫炁流强度</h2>
+    <p class="hint">粒子密度归一化 · 低于 25% 视为滞留死角</p>
+    <div id="stats"></div>
+    <p class="note" id="verdict"></p>
+
+    <h2 style="margin-top:20px">炁 × 玄空 × 八宅</h2>
+    <p class="hint">炁弱只在旺位/吉方才是真问题</p>
+    <div id="cross"></div>
+  </div>
+</main>
+
+<footer>
+  炁流为<b>流体直觉的示意模型</b>：粒子自炁口注入，受墙体反射与随机扩散，统计各宫粒子驻留密度。
+  它模拟的是空间通达性与滞留区，<b>不是真实空气动力学，也不是古法定量</b>——
+  传统堪舆并无「炁速」数值，此处参数仅为可视化调节。滞留区与户型缺角、动线死角高度相关，可作布局参考。
+</footer>
+
+<script>
+/* ═══ 几何 ═══ */
+const PLANS={
+  L:[[40,40],[320,40],[320,320],[150,320],[150,220],[40,220]],
+  SQ:[[45,45],[315,45],[315,315],[45,315]],
+  U:[[40,40],[320,40],[320,320],[240,320],[240,170],[130,170],[130,320],[40,320]]
+};
+const PALACE_CELL=[[6,1,8],[7,5,3],[2,9,4]];
+const PG={1:["坎","北"],2:["坤","西南"],3:["震","东"],4:["巽","东南"],5:["中","中宫"],
+          6:["乾","西北"],7:["兑","西"],8:["艮","东北"],9:["离","南"]};
+function inside(poly,x,y){let c=false;
+  for(let i=0,n=poly.length;i<n;i++){const[x1,y1]=poly[i],[x2,y2]=poly[(i+1)%n];
+    if((y1>y)!==(y2>y) && x<(x2-x1)*(y-y1)/(y2-y1)+x1)c=!c;}
+  return c;}
+
+
+/* ═══ 玄空飞星 + 八宅引擎（自 paipan.html 移植；两页各自独立以便单文件发布）═══ */
+const PATH_=[5,6,7,8,9,1,2,3,4];
+const M_=[["壬",1,"地","阳",345],["子",1,"天","阴",0],["癸",1,"人","阴",15],
+["丑",8,"地","阴",30],["艮",8,"天","阳",45],["寅",8,"人","阳",60],
+["甲",3,"地","阳",75],["卯",3,"天","阴",90],["乙",3,"人","阴",105],
+["辰",4,"地","阴",120],["巽",4,"天","阳",135],["巳",4,"人","阳",150],
+["丙",9,"地","阳",165],["午",9,"天","阴",180],["丁",9,"人","阴",195],
+["未",2,"地","阴",210],["坤",2,"天","阳",225],["申",2,"人","阳",240],
+["庚",7,"地","阳",255],["酉",7,"天","阴",270],["辛",7,"人","阴",285],
+["戌",6,"地","阴",300],["乾",6,"天","阳",315],["亥",6,"人","阳",330]];
+const TIX_={};[[1,"子癸甲申"],[2,"壬卯乙未坤"],[6,"乾亥辰巽巳戌"],[7,"酉辛丑艮丙"],[9,"寅午庚丁"]]
+  .forEach(([v,ms])=>[...ms].forEach(c=>TIX_[c]=v));
+const norm_=d=>((d%360)+360)%360;
+function mtn_(d){d=norm_(d);for(const m of M_){const lo=norm_(m[4]-7.5),hi=norm_(m[4]+7.5);
+  if(lo<hi){if(d>=lo&&d<hi)return m}else{if(d>=lo||d<hi)return m}}return M_[0];}
+function off_(d,m){let o=norm_(d)-m[4];if(o>180)o-=360;if(o<-180)o+=360;return o;}
+function fly_(c,f){const o={};PATH_.forEach((p,i)=>{const st=f?i:-i;o[p]=((c-1+st)%9+9)%9+1;});return o;}
+function yy_(e,a){if(e===5)return a[3];const m=M_.find(x=>x[1]===e&&x[2]===a[2]);return m[3];}
+function ti_(R,a){if(R===5)return 5;const m=M_.find(x=>x[1]===R&&x[2]===a[2]);return TIX_[m[0]];}
+function pan_(yun,facing){
+  const F=mtn_(facing),S=mtn_(facing+180),o=off_(facing,F),xg=Math.abs(o)<=4.5;
+  const yp=fly_(yun,true);
+  const Rs=yp[S[1]],sy=yy_(Rs,S), Rx=yp[F[1]],xy=yy_(Rx,F);
+  const se=xg?Rs:ti_(Rs,S), xe=xg?Rx:ti_(Rx,F);
+  const sp=fly_(se,sy==="阳"), xp=fly_(xe,xy==="阳");
+  const a=S[1],b=F[1],W=yun;let ge;
+  if(sp[a]===W&&xp[b]===W)ge="旺山旺向";
+  else if(sp[b]===W&&xp[b]===W)ge="双星到向";
+  else if(sp[a]===W&&xp[a]===W)ge="双星到坐";
+  else if(sp[b]===W&&xp[a]===W)ge="上山下水";
+  else ge="非四正格";
+  return{F,S,off:o,xiagua:xg,yun,yp,sp,xp,ge};
+}
+const YAO_={1:[0,1,0],2:[0,0,0],3:[1,0,0],4:[0,1,1],6:[1,1,1],7:[1,1,0],8:[0,0,1],9:[1,0,1]};
+const BY_={};Object.keys(YAO_).forEach(k=>BY_[YAO_[k].join("")]=+k);
+const YSEQ_=[[2,"生气"],[1,"五鬼"],[0,"延年"],[1,"六煞"],[2,"祸害"],[1,"天医"],[0,"绝命"],[1,"伏位"]];
+const JI4_=["生气","延年","天医","伏位"];
+function bazhai_(z){if(!YAO_[z])return null;const y=YAO_[z].slice(),o={};
+  YSEQ_.forEach(([i,n])=>{y[i]^=1;o[BY_[y.join("")]]=n;});return o;}
+
+/* ═══ 状态 ═══ */
+const $=id=>document.getElementById(id);
+let ST={plan:PLANS.L,ent:0,spd:1.6,dif:.06,cnt:900,hgt:70,mode:"flow",
+        deg:209.5,yun:9,yaw:-0.55,pitch:0.82,dist:520};
+try{const sv=JSON.parse(localStorage.getItem("fs_plan")||"null");
+  if(Array.isArray(sv)&&sv.length>=3)ST.plan=sv;
+  const sd=localStorage.getItem("fs_deg"); if(sd!==null)ST.deg=+sd;
+  const sy=localStorage.getItem("fs_yun"); if(sy!==null)ST.yun=+sy;
+}catch(e){}
+let GRID=null,BB=null,parts=[],density=null,statsCov=null;
+
+/* ═══ 占据栅格 ═══ */
+const G=72;
+function buildGrid(){
+  const xs=ST.plan.map(p=>p[0]),ys=ST.plan.map(p=>p[1]);
+  BB={x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys)};
+  BB.cw=(BB.x1-BB.x0)/G; BB.ch=(BB.y1-BB.y0)/G;
+  GRID=new Uint8Array(G*G);
+  for(let i=0;i<G;i++)for(let j=0;j<G;j++)
+    GRID[i*G+j]=inside(ST.plan,BB.x0+(i+.5)*BB.cw,BB.y0+(j+.5)*BB.ch)?1:0;
+  density=new Float32Array(G*G);
+  buildField();
+}
+const cellOK=(i,j)=>i>=0&&i<G&&j>=0&&j<G&&GRID[i*G+j];
+let DIST=null,MAXD=1;
+function buildField(){                       // 自炁口 BFS 测地距离（绕墙）
+  DIST=new Float32Array(G*G).fill(-1);
+  const e=entryPoint(); const[si,sj]=toCell(e.x,e.y);
+  if(!cellOK(si,sj))return;
+  const q=[si*G+sj]; DIST[si*G+sj]=0; let head=0; MAXD=1;
+  while(head<q.length){
+    const k=q[head++], i=(k/G)|0, j=k%G, d=DIST[k];
+    for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){
+      if(!di&&!dj)continue;
+      const ni=i+di,nj=j+dj;
+      if(!cellOK(ni,nj))continue;
+      const nk=ni*G+nj;
+      if(DIST[nk]>=0)continue;
+      DIST[nk]=d+((di&&dj)?1.414:1);
+      if(DIST[nk]>MAXD)MAXD=DIST[nk];
+      q.push(nk);
+    }
+  }
+}
+function gradAt(i,j){                        // 指向「离炁口更远」的方向
+  const d0=DIST[i*G+j]; if(d0<0)return[0,0];
+  let bx=0,by=0,best=d0;
+  for(let di=-1;di<=1;di++)for(let dj=-1;dj<=1;dj++){
+    if(!di&&!dj)continue;
+    const ni=i+di,nj=j+dj;
+    if(!cellOK(ni,nj))continue;
+    const d=DIST[ni*G+nj];
+    if(d>best){best=d;bx=di;by=dj;}
+  }
+  const m=Math.hypot(bx,by)||1; return[bx/m,by/m];
+}
+const toCell=(x,y)=>[Math.floor((x-BB.x0)/BB.cw),Math.floor((y-BB.y0)/BB.ch)];
+
+/* ═══ 粒子 ═══ */
+function entryPoint(){
+  const th=ST.ent*Math.PI/180;
+  const cx=(BB.x0+BB.x1)/2, cy=(BB.y0+BB.y1)/2;
+  const R=Math.max(BB.x1-BB.x0,BB.y1-BB.y0)*.62;
+  // 自外向内找第一个室内格
+  let px=cx+Math.sin(th)*R, py=cy-Math.cos(th)*R;
+  const vx=-Math.sin(th), vy=Math.cos(th);
+  for(let s=0;s<200;s++){
+    const[i,j]=toCell(px,py);
+    if(cellOK(i,j))return{x:px,y:py,vx,vy};
+    px+=vx*3; py+=vy*3;
+  }
+  return{x:cx,y:cy,vx,vy};
+}
+function spawn(p){
+  const e=entryPoint(), sp=(BB.x1-BB.x0)*0.06;
+  p.x=e.x+(Math.random()-.5)*sp*2; p.y=e.y+(Math.random()-.5)*sp*2;
+  const[i,j]=toCell(p.x,p.y);
+  if(!cellOK(i,j)){p.x=e.x;p.y=e.y;}
+  p.vx=e.vx*ST.spd+(Math.random()-.5)*.3;
+  p.vy=e.vy*ST.spd+(Math.random()-.5)*.3;
+  p.life=140+Math.random()*320; p.age=0;
+  p.z=Math.random();
+}
+function initParts(){parts=[];for(let k=0;k<ST.cnt;k++){const p={};spawn(p);parts.push(p);}}
+function step(){
+  const d=ST.dif;
+  for(const p of parts){
+    p.age++;
+    if(p.age>p.life){spawn(p);continue;}
+    let[i,j]=toCell(p.x,p.y);
+    if(!cellOK(i,j)){spawn(p);continue;}
+    const[gx,gy]=gradAt(i,j);                 // 顺着离炁口更远的方向流
+    p.vx=p.vx*0.72+gx*ST.spd*0.55+(Math.random()-.5)*d*6;
+    p.vy=p.vy*0.72+gy*ST.spd*0.55+(Math.random()-.5)*d*6;
+    const sp=Math.hypot(p.vx,p.vy)||1, mx=ST.spd;
+    if(sp>mx){p.vx=p.vx/sp*mx;p.vy=p.vy/sp*mx;}
+    let nx=p.x+p.vx*2.2, ny=p.y+p.vy*2.2;
+    let[ni,nj]=toCell(nx,ny);
+    if(!cellOK(ni,nj)){                       // 贴墙滑动而非反弹
+      if(cellOK(toCell(nx,p.y)[0],toCell(nx,p.y)[1])){ny=p.y;p.vy*=-.3;}
+      else if(cellOK(toCell(p.x,ny)[0],toCell(p.x,ny)[1])){nx=p.x;p.vx*=-.3;}
+      else {spawn(p);continue;}
+      [ni,nj]=toCell(nx,ny);
+      if(!cellOK(ni,nj)){spawn(p);continue;}
+    }
+    p.x=nx;p.y=ny;
+    density[ni*G+nj]+=1;
+    // 随行程消散：越远越易散去，避免在末端堆积（也符合「炁行则衰」）
+    const dn=DIST[ni*G+nj]/MAXD;
+    if(Math.random()<0.0015+0.010*dn*dn)spawn(p);
+  }
+  for(let k=0;k<density.length;k++)density[k]*=0.992;
+}
+
+/* ═══ 3D 投影（软件渲染，无依赖）═══ */
+const cv=$("view"),cx2=cv.getContext("2d");
+function project(x,y,z){                     // x东 y南(平面) z高
+  const c=[(BB.x0+BB.x1)/2,(BB.y0+BB.y1)/2];
+  let X=x-c[0], Z=y-c[1], Y=z;
+  const cy=Math.cos(ST.yaw),sy=Math.sin(ST.yaw);
+  let X1=X*cy-Z*sy, Z1=X*sy+Z*cy;
+  const cp=Math.cos(ST.pitch),sp=Math.sin(ST.pitch);
+  let Y2=Y*cp-Z1*sp, Z2=Y*sp+Z1*cp;
+  const f=700, dep=Z2+ST.dist;
+  if(dep<1)return null;
+  const s=f/dep;
+  return{x:cv.width/2+X1*s, y:cv.height/2+40-Y2*s, s, d:dep};
+}
+function palaceOf(x,y){
+  const w=(BB.x1-BB.x0)/3,h=(BB.y1-BB.y0)/3;
+  const c=Math.min(2,Math.max(0,Math.floor((x-BB.x0)/w)));
+  const r=Math.min(2,Math.max(0,Math.floor((y-BB.y0)/h)));
+  return PALACE_CELL[r][c];
+}
+function draw(){
+  cx2.clearRect(0,0,cv.width,cv.height);
+  const css=getComputedStyle(document.documentElement);
+  const brass=css.getPropertyValue("--brass").trim()||"#C9A24A";
+  const cin=css.getPropertyValue("--cinnabar").trim()||"#CE5041";
+  const jade=css.getPropertyValue("--jade").trim()||"#6BA189";
+  const lac=css.getPropertyValue("--lacquer").trim()||"#0B0A08";
+  cx2.fillStyle=lac; cx2.fillRect(0,0,cv.width,cv.height);
+
+  // ── 地面九宫 ──
+  const w=(BB.x1-BB.x0)/3,h=(BB.y1-BB.y0)/3;
+  const faces=[];
+  for(let r=0;r<3;r++)for(let c=0;c<3;c++){
+    const gx=BB.x0+c*w, gy=BB.y0+r*h, g=PALACE_CELL[r][c];
+    const pts=[[gx,gy],[gx+w,gy],[gx+w,gy+h],[gx,gy+h]].map(p=>project(p[0],p[1],0));
+    if(pts.some(p=>!p))continue;
+    const cov=statsCov?statsCov[g]:0;
+    faces.push({z:Math.max(...pts.map(p=>p.d)),type:"floor",pts,g,cov,gx,gy,w,h});
+  }
+  // ── 墙面 ──
+  const H=ST.hgt;
+  for(let i=0;i<ST.plan.length;i++){
+    const a=ST.plan[i], b=ST.plan[(i+1)%ST.plan.length];
+    const q=[project(a[0],a[1],0),project(b[0],b[1],0),project(b[0],b[1],H),project(a[0],a[1],H)];
+    if(q.some(p=>!p))continue;
+    faces.push({z:(q[0].d+q[1].d)/2,type:"wall",pts:q});
+  }
+  faces.sort((p,q)=>q.z-p.z);
+  for(const f of faces){
+    cx2.beginPath();
+    f.pts.forEach((p,k)=>k?cx2.lineTo(p.x,p.y):cx2.moveTo(p.x,p.y));
+    cx2.closePath();
+    if(f.type==="floor"){
+      const t=Math.min(1,f.cov);
+      const col=t<0.25?[174,53,39]:(t>0.7?[61,106,87]:[138,106,31]);
+      cx2.fillStyle=`rgba(${col[0]},${col[1]},${col[2]},${0.10+0.30*t})`;
+      cx2.fill();
+      cx2.strokeStyle="rgba(201,162,74,.28)";cx2.lineWidth=1;cx2.stroke();
+    }else{
+      cx2.fillStyle="rgba(201,162,74,.09)";cx2.fill();
+      cx2.strokeStyle="rgba(201,162,74,.55)";cx2.lineWidth=1.4;cx2.stroke();
+    }
+  }
+  // 宫名标签（贴地）
+  for(const f of faces){
+    if(f.type!=="floor")continue;
+    const cp=project(f.gx+f.w/2,f.gy+f.h/2,0); if(!cp)continue;
+    cx2.font=`${Math.max(10,13*cp.s)}px "Songti SC",serif`;
+    cx2.textAlign="center";
+    cx2.fillStyle="rgba(232,225,206,.62)";
+    cx2.fillText(PG[f.g][1],cp.x,cp.y);
+    cx2.font=`${Math.max(8,9.5*cp.s)}px system-ui`;
+    cx2.fillStyle=f.cov<0.25?cin:"rgba(232,225,206,.40)";
+    cx2.fillText(Math.round(f.cov*100)+"%",cp.x,cp.y+13);
+  }
+
+  // ── 粒子 ──
+  if(ST.mode==="flow"){
+    cx2.globalCompositeOperation="lighter";
+    for(const p of parts){
+      const zz=p.z*H*.75+H*.08;
+      const pr=project(p.x,p.y,zz); if(!pr)continue;
+      const g=palaceOf(p.x,p.y);
+      const cov=statsCov?statsCov[g]:.5;
+      const col=cov<0.25?"206,80,65":(cov>0.7?"120,200,160":"220,180,90");
+      const fade=1-p.age/p.life;
+      const rr=Math.max(.6,1.5*pr.s);
+      cx2.fillStyle=`rgba(${col},${0.42*fade})`;
+      cx2.beginPath();cx2.arc(pr.x,pr.y,rr,0,6.283);cx2.fill();
+    }
+    cx2.globalCompositeOperation="source-over";
+  }else{
+    // 滞留热力：直接画栅格密度
+    let mx=0; for(let k=0;k<density.length;k++)if(density[k]>mx)mx=density[k];
+    if(mx<=0)mx=1;
+    cx2.globalCompositeOperation="lighter";
+    for(let i=0;i<G;i++)for(let j=0;j<G;j++){
+      if(!GRID[i*G+j])continue;
+      const t=Math.min(1,density[i*G+j]/mx*3);
+      const x=BB.x0+(i+.5)*BB.cw, y=BB.y0+(j+.5)*BB.ch;
+      const pr=project(x,y,2); if(!pr)continue;
+      const col=t<0.2?"206,80,65":(t>0.6?"120,200,160":"220,180,90");
+      cx2.fillStyle=`rgba(${col},${0.10+0.5*t})`;
+      const s=Math.max(1.5,BB.cw*pr.s*1.15);
+      cx2.fillRect(pr.x-s/2,pr.y-s/2,s,s);
+    }
+    cx2.globalCompositeOperation="source-over";
+  }
+
+  // 炁口标记
+  const e=entryPoint(), ep=project(e.x,e.y,6);
+  if(ep){cx2.fillStyle=brass;cx2.beginPath();cx2.arc(ep.x,ep.y,5,0,6.283);cx2.fill();
+    cx2.font='11px system-ui';cx2.textAlign="center";cx2.fillStyle=brass;
+    cx2.fillText("炁口",ep.x,ep.y-10);}
+  // 指北
+  cx2.font='12px system-ui';cx2.textAlign="left";
+  cx2.fillStyle="rgba(201,162,74,.85)";cx2.fillText("↑ 北 = 远端",14,22);
+}
+
+/* ═══ 统计 ═══ */
+function computeStats(){
+  // 炁强度 = exp(-测地距离/λ)，不可达为 0。确定性、不随机、可复算。
+  const lam=MAXD/2.2;
+  const w=Math.floor(G/3),h=Math.floor(G/3);
+  const sum={},cnt={},reach={};
+  for(let r=0;r<3;r++)for(let c=0;c<3;c++){
+    const g=PALACE_CELL[r][c];sum[g]=0;cnt[g]=0;reach[g]=0;
+    for(let i=c*w;i<(c+1)*w;i++)for(let j=r*h;j<(r+1)*h;j++){
+      if(!GRID[i*G+j])continue;
+      cnt[g]++;
+      const d=DIST?DIST[i*G+j]:-1;
+      if(d>=0){reach[g]++;sum[g]+=Math.exp(-d/lam);}
+    }
+  }
+  statsCov={};
+  Object.keys(sum).forEach(g=>{statsCov[g]=cnt[g]?sum[g]/cnt[g]:0;});
+  return{statsCov,cnt,reach};
+}
+function renderStats(){
+  const{statsCov:sc,cnt,reach}=computeStats();
+  const order=[6,1,8,7,5,3,2,9,4];
+  $("stats").innerHTML=order.map(g=>{
+    const v=Math.round(sc[g]*100);
+    const col=sc[g]<0.25?"var(--cinnabar)":(sc[g]>0.7?"var(--jade)":"var(--brass)");
+    return `<div class="row"><span class="nm">${PG[g][0]}·${PG[g][1]}</span>`+
+      `<span class="bar"><i style="width:${v}%;background:${col}"></i></span>`+
+      `<span class="pc" style="color:${col}">${v}%</span></div>`;
+  }).join("");
+  const noArea=order.filter(g=>!cnt[g]);
+  const blocked=order.filter(g=>cnt[g]&&!reach[g]);
+  const weak=order.filter(g=>cnt[g]&&reach[g]&&sc[g]<0.25);
+  let t="";
+  if(noArea.length)t+=`<span style="color:var(--cinnabar)">缺角</span>：${noArea.map(g=>PG[g][1]).join("、")}（无室内面积）。 `;
+  if(blocked.length)t+=`<span style="color:var(--cinnabar)">不可达</span>：${blocked.map(g=>PG[g][1]).join("、")}（被墙体完全隔断）。 `;
+  if(weak.length)t+=`<span style="color:var(--cinnabar)">炁弱</span>：${weak.map(g=>PG[g][1]).join("、")} —— 距炁口路径过长，宜开窗引炁或置动器。`;
+  else if(!noArea.length&&!blocked.length)t="八方炁流均衡，未见明显衰竭。";
+  $("verdict").innerHTML=t;
+}
+
+function renderCross(){
+  const P=pan_(ST.yun,ST.deg), BZ=bazhai_(P.S[1]);
+  const{statsCov:sc,cnt,reach}=computeStats();
+  $("panInfo").innerHTML=`<b>${P.S[0]}山${P.F[0]}向</b> · ${P.xiagua?"下卦":"替卦"} · `+
+    `<span style="color:var(--brass)">${P.ge}</span>`;
+  const W=ST.yun, order=[6,1,8,7,3,2,9,4];
+  const rows=[];
+  order.forEach(g=>{
+    const q=sc[g], name=PG[g][0]+"宫（"+PG[g][1]+"）";
+    const wang=(P.xp[g]===W||P.sp[g]===W), sha=(P.sp[g]===5||P.xp[g]===5||P.sp[g]===2||P.xp[g]===2);
+    const b=BZ?BZ[g]:null, bji=b&&JI4_.includes(b);
+    const weak=q<0.25, none=!cnt[g], blocked=cnt[g]&&!reach[g];
+    let msg=null,tone="";
+    if(none){ if(wang||bji){msg=`缺角，且为${wang?"玄空当运"+W+"旺位":""}${wang&&bji?"、":""}${bji?"八宅"+b:""} —— 影响最大`;tone="var(--cinnabar)";} }
+    else if(blocked){ msg=`被墙体隔断，炁不可达${wang?"，且此宫为当运旺位":""}`;tone="var(--cinnabar)"; }
+    else if(weak&&(wang||bji)){ msg=`炁弱 ${Math.round(q*100)}%，却是${wang?"当运"+W+"旺位":""}${wang&&bji?"兼":""}${bji?"八宅"+b:""} —— <b>宜开窗引炁或置动器</b>`;tone="var(--cinnabar)"; }
+    else if(weak&&(sha||(b&&!bji))){ msg=`炁弱 ${Math.round(q*100)}%，但本为${sha?"玄空凶星":"八宅"+b}之位 —— 炁不至反而少受其害`;tone="var(--jade)"; }
+    else if(q>0.6&&(wang||bji)){ msg=`炁旺 ${Math.round(q*100)}% 且为${wang?"当运旺位":"八宅"+b} —— 最佳用位`;tone="var(--jade)"; }
+    else if(q>0.6&&sha){ msg=`炁旺 ${Math.round(q*100)}% 却是凶星位 —— 凶气被带动，宜静不宜动`;tone="var(--cinnabar)"; }
+    if(msg)rows.push(`<div style="padding:5px 0;border-top:1px dotted var(--edge);font-size:12px">`+
+      `<span style="color:${tone};font-weight:600">${name}</span> ${msg}</div>`);
+  });
+  $("cross").innerHTML=rows.join("")||`<div class="note">未见需要特别处理的组合。</div>`;
+}
+
+/* ═══ 交互 ═══ */
+let drag=null;
+cv.addEventListener("pointerdown",e=>{drag={x:e.clientX,y:e.clientY};cv.setPointerCapture(e.pointerId);});
+cv.addEventListener("pointermove",e=>{
+  if(!drag)return;
+  ST.yaw+=(e.clientX-drag.x)*0.006;
+  ST.pitch=Math.max(0.12,Math.min(1.45,ST.pitch+(e.clientY-drag.y)*0.005));
+  drag={x:e.clientX,y:e.clientY};
+});
+cv.addEventListener("pointerup",()=>drag=null);
+cv.addEventListener("wheel",e=>{e.preventDefault();
+  ST.dist=Math.max(220,Math.min(1100,ST.dist+e.deltaY*0.6));},{passive:false});
+
+function bindRange(id,key,fmt){
+  $(id).addEventListener("input",e=>{
+    ST[key]=+e.target.value; $(id+"V").textContent=fmt?fmt(ST[key]):ST[key];
+    if(key==="cnt")initParts();
+  });
+}
+bindRange("spd","spd");bindRange("dif","dif");bindRange("cnt","cnt");bindRange("hgt","hgt");
+$("ent").addEventListener("change",e=>{
+  ST.ent=+e.target.value;
+  $("entV").textContent=e.target.selectedOptions[0].textContent.replace(/（.*/,"");
+  density.fill(0);buildField();initParts();
+});
+$("mFlow").onclick=()=>{ST.mode="flow";$("mFlow").setAttribute("aria-pressed","true");$("mHeat").setAttribute("aria-pressed","false");};
+$("mHeat").onclick=()=>{ST.mode="heat";$("mHeat").setAttribute("aria-pressed","true");$("mFlow").setAttribute("aria-pressed","false");};
+function setPlan(p){ST.plan=PLANS[p];buildGrid();initParts();savePlan();}
+$("pL").onclick=()=>setPlan("L");$("pSq").onclick=()=>setPlan("SQ");$("pU").onclick=()=>setPlan("U");
+$("reset").onclick=()=>{ST.yaw=-0.55;ST.pitch=0.82;ST.dist=520;};
+const YUNN=["","一","二","三","四","五","六","七","八","九"];
+$("deg").value=ST.deg;$("degV").textContent=ST.deg.toFixed(1)+"°";
+$("yun").value=ST.yun;$("yunV").textContent=YUNN[ST.yun]+"运";
+$("deg").addEventListener("input",e=>{ST.deg=+e.target.value;
+  $("degV").textContent=ST.deg.toFixed(1)+"°";
+  try{localStorage.setItem("fs_deg",ST.deg)}catch(x){} renderCross();});
+$("yun").addEventListener("input",e=>{ST.yun=+e.target.value;
+  $("yunV").textContent=YUNN[ST.yun]+"运";
+  try{localStorage.setItem("fs_yun",ST.yun)}catch(x){} renderCross();});
+function savePlan(){try{localStorage.setItem("fs_plan",JSON.stringify(ST.plan))}catch(x){}}
+
+/* ═══ 主循环 ═══ */
+buildGrid();initParts();
+let frame=0;
+(function loop(){
+  step();
+  if(frame%12===0){renderStats();renderCross();}
+  draw();frame++;
+  requestAnimationFrame(loop);
+})();
+</script>

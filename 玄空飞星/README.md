@@ -54,9 +54,16 @@ python3 reference/conformance_test.py    # 1229/1229 passed
 
 把 `conformance_test.py` 里的 `ADAPTER` 换成你自己的引擎，即可用同一套 golden 数据做回归。
 
+## 站点
+
+`site/` 是可直接部署的静态站点（门户 + 三个工具，统一导航，英文路径）。
+部署方式见 [site/DEPLOY.md](site/DEPLOY.md)；仓库根部已备好 GitHub Pages workflow。
+
 ## 目录
 
 ```
+site/                        可部署站点（index / paipan / qiflow / research）
+api/                         AI 堪舆师 Serverless 后端（Cloudflare Worker）
 玄空飞星排盘.html            单文件网页（可直接打开）
 玄空飞星排盘-算法规格.md      算法规格 + 勘误 + 替卦起星完整推导
 reference/
