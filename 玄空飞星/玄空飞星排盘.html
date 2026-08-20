@@ -226,6 +226,8 @@ footer code{background:var(--panel-2);padding:1px 4px;border-radius:2px}
           <button id="pSquare">改为方正户型</button>
           <button id="pAdd">在最长边加点</button>
         </div>
+        <p style="margin:10px 0 0"><a href="炁流场3D.html"
+           style="font-size:11.5px;color:var(--brass)">→ 用这个户型看三维炁流场</a></p>
       </div>
       <div>
         <h2 style="margin:0 0 8px;font-size:13px;letter-spacing:.14em;
@@ -785,12 +787,22 @@ function render(){
   if(conflict.length)all.push(`<span class="t-brass">两派分歧</span>　${conflict.join("；")}。玄空重时运、八宅重宅命，`+
     `分歧处本工具不替你裁决 —— 传统上以玄空当运星为主、八宅为辅，但需结合峦头实勘。`);
   $("notes").innerHTML=all.map(t=>`<li>${t}</li>`).join("")||"<li>本盘无显著吉凶偏向。</li>";
+  try{localStorage.setItem("fs_plan",JSON.stringify(ST.plan));
+      localStorage.setItem("fs_deg",ST.deg);
+      localStorage.setItem("fs_yun",ST.yun);}catch(e){}
 }
 
 /* ═══════ 绑定 ═══════ */
 (function init(){
+  // 与炁流场页共享：优先采用已保存的户型与坐向
+  try{const sv=JSON.parse(localStorage.getItem("fs_plan")||"null");
+    if(Array.isArray(sv)&&sv.length>=3)ST.plan=sv;
+    const sd=localStorage.getItem("fs_deg"); if(sd!==null)ST.deg=+sd;
+    const sy=localStorage.getItem("fs_yun"); if(sy!==null)ST.yun=+sy;
+  }catch(e){}
   // 强制回到确定初值，避免浏览器表单恢复覆盖默认态
   $("deg").value=ST.deg;$("degr").value=ST.deg;$("date").value=ST.date;
+  const _sy=$("yun");if(_sy)_sy.value=ST.yun;
   $("time").value=ST.time;$("birth").value=2000;
   ["deg","degr","date","time","birth"].forEach(id=>$(id).setAttribute("autocomplete","off"));
   const sel=$("yun");
@@ -811,6 +823,7 @@ function render(){
   // bfcache（前进/后退）恢复后，表单值可能被浏览器改写，重新同步一次
   window.addEventListener("pageshow",e=>{if(e.persisted){
     $("deg").value=ST.deg;$("degr").value=ST.deg;$("date").value=ST.date;
+  const _sy=$("yun");if(_sy)_sy.value=ST.yun;
     $("time").value=ST.time;$("yun").value=ST.yun;render();}});
 })();
 </script>
