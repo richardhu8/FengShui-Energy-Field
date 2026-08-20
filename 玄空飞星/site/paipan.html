@@ -73,6 +73,33 @@ input[type=range]{padding:0;background:none;border:none;accent-color:var(--cinna
 .kv b{font-weight:600;font-variant-numeric:tabular-nums}
 
 .stage{display:flex;flex-direction:column;gap:22px}
+/* ═══ 工作台布局：≥1100px 时整页不滚，三栏各自滚动 ═══ */
+.center,.side{display:flex;flex-direction:column;gap:22px}
+@media(min-width:1100px){
+  html,body{height:100%;overflow:hidden}
+  body{display:flex;flex-direction:column}
+  header{flex:none}
+  main{flex:1;min-height:0;max-width:none;width:100%;padding:14px 16px;gap:14px;
+       align-items:stretch;
+       grid-template-columns:minmax(300px,330px) minmax(420px,1fr) minmax(330px,430px)}
+  main>.rail,main>.center,main>.side{min-height:0;overflow-y:auto;overflow-x:hidden;
+       padding-right:6px;scrollbar-width:thin}
+  main>.rail::-webkit-scrollbar,main>.center::-webkit-scrollbar,
+  main>.side::-webkit-scrollbar{width:7px}
+  main>.rail::-webkit-scrollbar-thumb,main>.center::-webkit-scrollbar-thumb,
+  main>.side::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}
+  main>.center .plate-wrap{grid-template-columns:1fr;padding:0}
+  footer{flex:none;margin:0;max-width:none;padding:6px 16px;font-size:10.5px;line-height:1.45;
+         border-top:1px solid var(--edge);background:var(--panel);
+         max-height:2.9em;overflow-y:auto}
+}
+/* 全屏盘面 */
+.stagewrap:fullscreen{background:var(--ground);padding:24px;overflow:auto}
+.fsbtn{position:absolute;top:10px;right:12px;z-index:2;font:inherit;font-size:11px;
+  padding:3px 9px;background:var(--panel-2);color:var(--ink-3);
+  border:1px solid var(--edge);border-radius:2px;cursor:pointer}
+.fsbtn:hover{border-color:var(--brass);color:var(--brass)}
+
 .stagewrap{position:relative}
 .plate-wrap{display:grid;grid-template-columns:minmax(240px,320px) 1fr;gap:20px;padding:18px}
 @media(max-width:760px){.plate-wrap{grid-template-columns:1fr}}
@@ -230,8 +257,8 @@ header .sub{display:none}
     </div>
   </div>
 
-  <div class="stage">
-    <div class="card stagewrap">
+  <div class="center">
+    <div class="card stagewrap"><button class="fsbtn" id="fsBtn">⛶ 全屏</button>
       <div class="plate-wrap" style="padding:0">
       <div>
         <svg class="compass" id="compass" viewBox="0 0 320 320" role="img" aria-label="二十四山罗盘，红线为坐向轴"></svg>
@@ -259,6 +286,9 @@ header .sub{display:none}
       </div>
       </div>
     </div>
+  </div>
+
+  <div class="side">
     <div class="card planwrap">
       <div>
         <svg class="plan" id="plan" viewBox="0 0 360 360" role="img"
@@ -1335,6 +1365,14 @@ function gyroStop(){
       x.setAttribute("aria-pressed",x===b?"true":"false"));
     render();
   }));
+  $("fsBtn").addEventListener("click",()=>{
+    const el=document.querySelector(".stagewrap");
+    if(document.fullscreenElement)document.exitFullscreen();
+    else el.requestFullscreen&&el.requestFullscreen().catch(()=>{});
+  });
+  document.addEventListener("fullscreenchange",()=>{
+    $("fsBtn").textContent=document.fullscreenElement?"⛶ 退出":"⛶ 全屏";
+  });
   bindCompass();bindPlan();render();
   // bfcache（前进/后退）恢复后，表单值可能被浏览器改写，重新同步一次
   window.addEventListener("pageshow",e=>{if(e.persisted){
