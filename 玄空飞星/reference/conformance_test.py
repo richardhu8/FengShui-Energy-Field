@@ -146,6 +146,36 @@ for name,poly in (("方正",SQ),("L形",LSHAPE),("三角",TRI)):
 # 九宫格宫位映射：上北下南、左西右东
 check("PL.宫位映射", PLAN_CELL, [[6,1,8],[7,5,3],[2,9,4]])
 
-print(f"[含户型] {TOTAL-len(FAILS)}/{TOTAL} passed")
+print(f"[含户型] {TOTAL-len(FAILS)}/{TOTAL} checks so far")
+
+# ── 立极点（面积形心）与中心放射法 ──
+from feixing_engine import centroid, radial_coverage, sector_clip, signed_area, RADIAL_DIR
+check("RD.形心.方正", tuple(round(v,6) for v in centroid(SQ)), (150.0,150.0))
+# 形心 ≠ 外接矩形中心（L 形）
+cl=centroid(LSHAPE)
+check("RD.形心≠框心", (round(cl[0],2),round(cl[1],2)) != (150.0,150.0), True)
+# 形心须落在多边形外接框内
+check("RD.形心.在框内", 0<=cl[0]<=300 and 0<=cl[1]<=300, True)
+
+# 扇区面积守恒：8 个 45° 扇区之和 == 多边形总面积
+for name,poly in (("方正",SQ),("L形",LSHAPE),("三角",TRI)):
+    c=centroid(poly)
+    tot=sum(abs(signed_area(sector_clip(poly,c,th))) for th in RADIAL_DIR.values())
+    check(f"RD.{name}.扇区守恒", round(tot,6), round(poly_area(poly),6))
+
+# 归一化正确性：方正 / 细长 均不应误判缺角；L 形只有西南缺
+for g,v in radial_coverage(SQ).items():  check(f"RD.方正.{g}", round(v,6), 1.0)
+TALL=[(100,0),(200,0),(200,300),(100,300)]
+for g,v in radial_coverage(TALL).items(): check(f"RD.细长.{g}", round(v,6), 1.0)
+rc=radial_coverage(LSHAPE)
+check("RD.L形.西南缺", rc[2] < 0.6, True)
+for g in (6,1,8,7,3,9,4):
+    check(f"RD.L形.{g}不缺", rc[g] >= 0.6, True)
+# 两法结论一致：都指向西南
+check("RD.两法同指西南",
+      min(plan_coverage(LSHAPE), key=lambda k: plan_coverage(LSHAPE)[k]),
+      min(rc, key=lambda k: rc[k]))
+
+print(f"[含放射] {TOTAL-len(FAILS)}/{TOTAL} passed")
 for f in FAILS: print("  FAIL",f)
 sys.exit(1 if FAILS else 0)

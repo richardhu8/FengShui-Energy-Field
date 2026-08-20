@@ -270,3 +270,65 @@ def plan_coverage(poly):
             clipped = clip_rect(poly, cx, cy, cx+w, cy+h)
             cov[PLAN_CELL[r][c]] = poly_area(clipped)/cell_a if cell_a else 0.0
     return cov
+
+
+# ══════════ 立极点与中心放射法 ══════════
+import math as _math
+
+def signed_area(p):
+    return sum(p[i][0]*p[(i+1)%len(p)][1] - p[(i+1)%len(p)][0]*p[i][1]
+               for i in range(len(p))) / 2
+
+def centroid(p):
+    """多边形面积形心（非外接矩形中心）"""
+    A = signed_area(p)
+    if abs(A) < 1e-12: return None
+    cx = cy = 0.0
+    for i in range(len(p)):
+        x1,y1 = p[i]; x2,y2 = p[(i+1)%len(p)]
+        cr = x1*y2 - x2*y1
+        cx += (x1+x2)*cr; cy += (y1+y2)*cr
+    return (cx/(6*A), cy/(6*A))
+
+def clip_half(poly, cx, cy, nx, ny):
+    """半平面裁剪，保留 (p-c)·n >= 0"""
+    f = lambda q: (q[0]-cx)*nx + (q[1]-cy)*ny
+    out = []
+    for i in range(len(poly)):
+        a = poly[i]; b = poly[(i+1)%len(poly)]
+        fa, fb = f(a), f(b)
+        if fa >= 0 and fb >= 0: out.append(b)
+        elif fa >= 0 > fb:
+            t = fa/(fa-fb); out.append((a[0]+t*(b[0]-a[0]), a[1]+t*(b[1]-a[1])))
+        elif fa < 0 <= fb:
+            t = fa/(fa-fb); out.append((a[0]+t*(b[0]-a[0]), a[1]+t*(b[1]-a[1]))); out.append(b)
+    return out
+
+def _dir(theta):
+    """方位角 → 单位向量。屏幕坐标 y 向下：0°=北=(0,-1)，顺时针"""
+    r = _math.radians(theta)
+    return (_math.sin(r), -_math.cos(r))
+
+def sector_clip(poly, c, theta, span=45.0):
+    """裁出以 c 为心、theta 为中线、span 度的扇区部分"""
+    d0 = _dir(theta - span/2); d1 = _dir(theta + span/2)
+    p = clip_half(poly, c[0], c[1], -d0[1],  d0[0])
+    if not p: return p
+    return clip_half(p, c[0], c[1],  d1[1], -d1[0])
+
+# 八方中线角（宫位洛书数 → 方位角）
+RADIAL_DIR = {1:0, 8:45, 3:90, 4:135, 9:180, 2:225, 7:270, 6:315}
+
+def radial_coverage(poly):
+    """中心放射法：自面积形心作 8 个 45° 扇区。
+    覆盖率 = 该扇区内户型面积 / 同扇区内外接矩形面积
+    （以外接矩形为基准，方正户型恒 100%，细长户型也不会误判）"""
+    c = centroid(poly)
+    xs = [q[0] for q in poly]; ys = [q[1] for q in poly]
+    bb = [(min(xs),min(ys)),(max(xs),min(ys)),(max(xs),max(ys)),(min(xs),max(ys))]
+    cov = {}
+    for g, th in RADIAL_DIR.items():
+        a = abs(signed_area(sector_clip(poly, c, th)))
+        b = abs(signed_area(sector_clip(bb,   c, th)))
+        cov[g] = a/b if b else 0.0
+    return cov
