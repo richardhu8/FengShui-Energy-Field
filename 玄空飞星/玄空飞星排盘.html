@@ -226,6 +226,28 @@ footer code{background:var(--panel-2);padding:1px 4px;border-radius:2px}
           <button id="pSquare">改为方正户型</button>
           <button id="pAdd">在最长边加点</button>
         </div>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--edge)">
+          <label for="file" style="cursor:pointer;display:inline-block;padding:5px 12px;
+            background:var(--brass);color:var(--lacquer);border-radius:2px;font-size:11.5px;font-weight:600">
+            📄 上传户型图</label>
+          <input id="file" type="file" accept="image/*" style="display:none">
+          <span id="upState" style="font-size:11px;color:var(--ink-3);margin-left:8px"></span>
+          <div id="upTune" style="display:none;margin-top:10px">
+            <label for="thr" style="display:flex;justify-content:space-between">
+              墙体阈值 <b id="thrV">自动</b></label>
+            <input id="thr" type="range" min="0" max="255" step="5" value="0">
+            <label for="clo" style="display:flex;justify-content:space-between;margin-top:6px">
+              门洞封闭半径 <b id="cloV">4%</b></label>
+            <input id="clo" type="range" min="1" max="12" step="1" value="4">
+            <div class="tool" style="margin-top:8px">
+              <button id="reDetect">重新识别</button>
+              <button id="toggleImg">隐藏底图</button>
+              <button id="dropImg">移除底图</button>
+            </div>
+            <p style="font-size:11px;color:var(--ink-3);margin:8px 0 0">
+              识别结果作<b>预标注</b>；不准就拖红点手动改，以手动结果为准。</p>
+          </div>
+        </div>
         <p style="margin:10px 0 0"><a href="炁流场3D.html"
            style="font-size:11.5px;color:var(--brass)">→ 用这个户型看三维炁流场</a></p>
       </div>
@@ -468,9 +490,176 @@ function radialAnalyze(poly){
   return{cov,secs,center:c,bbox:{x0,y0,x1,y1}};
 }
 
+
+/* ═══════ 户型图识别 ═══════ */
+let BACKDROP=null, AUTO_R=true;
+function otsu(gray,n){
+  const h=new Array(256).fill(0);
+  for(let i=0;i<n;i++)h[gray[i]]++;
+  let sum=0;for(let t=0;t<256;t++)sum+=t*h[t];
+  let sumB=0,wB=0,mx=0,th=128;
+  for(let t=0;t<256;t++){
+    wB+=h[t]; if(!wB)continue;
+    const wF=n-wB; if(!wF)break;
+    sumB+=t*h[t];
+    const mB=sumB/wB, mF=(sum-sumB)/wF, v=wB*wF*(mB-mF)*(mB-mF);
+    if(v>mx){mx=v;th=t;}
+  }
+  return th;
+}
+function dilSep(m,W,H,r){
+  const t=new Uint8Array(W*H), o=new Uint8Array(W*H);
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    let v=0;const lo=Math.max(0,x-r),hi=Math.min(W-1,x+r);
+    for(let k=lo;k<=hi;k++)if(m[y*W+k]){v=1;break;}
+    t[y*W+x]=v;
+  }
+  for(let x=0;x<W;x++)for(let y=0;y<H;y++){
+    let v=0;const lo=Math.max(0,y-r),hi=Math.min(H-1,y+r);
+    for(let k=lo;k<=hi;k++)if(t[k*W+x]){v=1;break;}
+    o[y*W+x]=v;
+  }
+  return o;
+}
+function eroSep(m,W,H,r){
+  const inv=new Uint8Array(W*H);
+  for(let i=0;i<W*H;i++)inv[i]=m[i]?0:1;
+  const d=dilSep(inv,W,H,r), o=new Uint8Array(W*H);
+  for(let i=0;i<W*H;i++)o[i]=d[i]?0:1;
+  return o;
+}
+function floodExt(m,W,H){
+  const ext=new Uint8Array(W*H), st=[];
+  const push=(x,y)=>{const i=y*W+x;if(!m[i]&&!ext[i]){ext[i]=1;st.push(i);}};
+  for(let x=0;x<W;x++){push(x,0);push(x,H-1);}
+  for(let y=0;y<H;y++){push(0,y);push(W-1,y);}
+  while(st.length){
+    const i=st.pop(),x=i%W,y=(i/W)|0;
+    if(x>0)push(x-1,y); if(x<W-1)push(x+1,y);
+    if(y>0)push(x,y-1); if(y<H-1)push(x,y+1);
+  }
+  return ext;
+}
+function largestCC(m,W,H){
+  const seen=new Uint8Array(W*H); let best=null,bn=0;
+  for(let s0=0;s0<W*H;s0++){
+    if(!m[s0]||seen[s0])continue;
+    const st=[s0],cells=[];seen[s0]=1;
+    while(st.length){
+      const i=st.pop();cells.push(i);
+      const x=i%W,y=(i/W)|0;
+      const nb=[[x-1,y],[x+1,y],[x,y-1],[x,y+1]];
+      for(const nn of nb){
+        const nx=nn[0],ny=nn[1];
+        if(nx<0||ny<0||nx>=W||ny>=H)continue;
+        const j=ny*W+nx;
+        if(m[j]&&!seen[j]){seen[j]=1;st.push(j);}
+      }
+    }
+    if(cells.length>bn){bn=cells.length;best=cells;}
+  }
+  const o=new Uint8Array(W*H);
+  if(best)for(const i of best)o[i]=1;
+  return o;
+}
+function traceContour(m,W,H){
+  let s0=-1;
+  for(let i=0;i<W*H;i++)if(m[i]){s0=i;break;}
+  if(s0<0)return[];
+  const N=[[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+  const sx=s0%W, sy=(s0/W)|0;
+  let cur=[sx,sy], b=4; const out=[[sx,sy]];
+  for(let it=0;it<W*H*4;it++){
+    let found=false;
+    for(let k=0;k<8;k++){
+      const d=(b+1+k)%8, nx=cur[0]+N[d][0], ny=cur[1]+N[d][1];
+      if(nx<0||ny<0||nx>=W||ny>=H)continue;
+      if(m[ny*W+nx]){b=(d+5)%8;cur=[nx,ny];out.push(cur);found=true;break;}
+    }
+    if(!found)break;
+    if(cur[0]===sx&&cur[1]===sy&&out.length>2)break;
+  }
+  return out;
+}
+function dpSimplify(pts,eps){
+  if(pts.length<3)return pts;
+  const d2=(p,a,b)=>{
+    const dx=b[0]-a[0],dy=b[1]-a[1];
+    if(!dx&&!dy)return Math.pow(p[0]-a[0],2)+Math.pow(p[1]-a[1],2);
+    let t=((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy);
+    t=Math.max(0,Math.min(1,t));
+    return Math.pow(p[0]-a[0]-t*dx,2)+Math.pow(p[1]-a[1]-t*dy,2);
+  };
+  let mx=0,idx=0;
+  for(let i=1;i<pts.length-1;i++){const d=d2(pts[i],pts[0],pts[pts.length-1]);if(d>mx){mx=d;idx=i;}}
+  if(mx>eps*eps)return dpSimplify(pts.slice(0,idx+1),eps).slice(0,-1).concat(dpSimplify(pts.slice(idx),eps));
+  return[pts[0],pts[pts.length-1]];
+}
+function footprintAt(gray,W,H,th,R){
+  const n=W*H, wall=new Uint8Array(n);
+  for(let i=0;i<n;i++)wall[i]=gray[i]<th?1:0;
+  const ext=floodExt(dilSep(wall,W,H,R),W,H);
+  let foot=new Uint8Array(n);
+  for(let i=0;i<n;i++)foot[i]=ext[i]?0:1;
+  foot=largestCC(eroSep(foot,W,H,R),W,H);
+  // 实心度：轮廓面积 / 其外接框面积。门洞未封住时会漏成细环，实心度很低
+  let a=0,x0=1e9,x1=-1,y0=1e9,y1=-1;
+  for(let i=0;i<n;i++)if(foot[i]){a++;const x=i%W,y=(i/W)|0;
+    if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
+  const bb=(x1<x0)?0:(x1-x0+1)*(y1-y0+1);
+  return{foot,area:a,solidity:bb?a/bb:0,frac:a/n};
+}
+function detectPlan(){
+  if(!BACKDROP)return;
+  const data=BACKDROP.data, W=BACKDROP.W, H=BACKDROP.H, n=W*H;
+  const gray=new Uint8Array(n);
+  for(let i=0;i<n;i++){
+    const a=data[i*4+3];
+    gray[i]=a<40?255:(0.299*data[i*4]+0.587*data[i*4+1]+0.114*data[i*4+2])|0;
+  }
+  const manual=+$("thr").value;
+  const th=manual>0?manual:Math.min(200,otsu(gray,n));
+  $("thrV").textContent=manual>0?String(manual):("自动 "+th);
+
+  const S=Math.min(W,H);
+  let best=null,usedPct=null;
+  if(AUTO_R){
+    // 自动搜索封闭半径：取「能把门洞封住」的最小半径，避免过度平滑
+    for(let pct=2;pct<=14;pct++){
+      const R=Math.max(2,Math.round(S*pct/100));
+      const r=footprintAt(gray,W,H,th,R);
+      if(r.solidity>=0.62&&r.frac>0.05){best=r;usedPct=pct;break;}
+      if(!best||r.solidity>best.solidity){best=r;usedPct=pct;}
+    }
+    $("clo").value=usedPct;
+    $("cloV").textContent="自动 "+usedPct+"%";
+  }else{
+    usedPct=+$("clo").value;
+    best=footprintAt(gray,W,H,th,Math.max(2,Math.round(S*usedPct/100)));
+    $("cloV").textContent=usedPct+"%";
+  }
+  if(!best||best.frac<0.02){$("upState").textContent="识别失败：请调阈值";return;}
+  const c=traceContour(best.foot,W,H);
+  if(c.length<8){$("upState").textContent="轮廓过短，请调参数";return;}
+  let pts=dpSimplify(c,Math.max(2,S*0.02));
+  if(pts.length>1&&pts[0][0]===pts[pts.length-1][0]&&pts[0][1]===pts[pts.length-1][1])pts.pop();
+  let eps=S*0.02;
+  while(pts.length>24&&eps<S*0.09){eps*=1.4;pts=dpSimplify(c,eps);
+    if(pts.length>1&&pts[0][0]===pts[pts.length-1][0]&&pts[0][1]===pts[pts.length-1][1])pts.pop();}
+  if(pts.length<3){$("upState").textContent="识别失败：顶点不足";return;}
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+  const bx0=Math.min.apply(null,xs),bx1=Math.max.apply(null,xs);
+  const by0=Math.min.apply(null,ys),by1=Math.max.apply(null,ys);
+  const sc=280/Math.max(bx1-bx0,by1-by0,1);
+  const ox=(360-(bx1-bx0)*sc)/2, oy=(360-(by1-by0)*sc)/2;
+  ST.plan=pts.map(p=>[Math.round(ox+(p[0]-bx0)*sc),Math.round(oy+(p[1]-by0)*sc)]);
+  $("upState").textContent="已识别 "+ST.plan.length+" 个顶点（实心度 "+best.solidity.toFixed(2)+"）";
+  render();
+}
+
 /* ═══════ 状态 ═══════ */
 const $=id=>document.getElementById(id);
-let ST={deg:209.5,yun:9,date:"2026-08-17",time:"12:00",up:"S",method:"J",
+let ST={deg:209.5,yun:9,date:"2026-08-17",time:"12:00",up:"S",method:"J",showImg:true,
         plan:PLAN_L.map(p=>p.slice())};
 
 /* ═══════ 罗盘 ═══════ */
@@ -564,6 +753,7 @@ function drawGrid(P,Z,BZ){
 /* ═══════ 户型图 ═══════ */
 function drawPlanRadial(P,BZ,A){
   const s=$("plan");s.textContent="";
+  planBackdrop(s);
   const c=A.center, R=250;
   Object.keys(RADIAL_DIR).map(Number).forEach(g=>{
     const th=RADIAL_DIR[g],pc=A.cov[g];
@@ -591,9 +781,17 @@ function drawPlanRadial(P,BZ,A){
   const n=el("text",{x:8,y:14,"font-size":10,fill:"var(--ink-3)"});n.textContent="↑ 北";s.appendChild(n);
   ST.plan.forEach((pt,i)=>s.appendChild(el("circle",{cx:pt[0],cy:pt[1],r:5.5,class:"vtx","data-i":i})));
 }
+function planBackdrop(s){
+  if(!BACKDROP||!BACKDROP.url||!ST.showImg)return;
+  const W=BACKDROP.W,H=BACKDROP.H,k=280/Math.max(W,H);
+  const iw=W*k,ih=H*k;
+  s.appendChild(el("image",{href:BACKDROP.url,x:(360-iw)/2,y:(360-ih)/2,
+    width:iw,height:ih,opacity:.30,preserveAspectRatio:"none"}));
+}
 function drawPlan(P,BZ,A){
   if(ST.method==="R")return drawPlanRadial(P,BZ,A);
   const s=$("plan");s.textContent="";
+  planBackdrop(s);
   const {cells,bbox}=A;
   // 九宫格底
   Object.keys(cells).map(Number).forEach(g=>{
@@ -819,6 +1017,31 @@ function render(){
   $("birth").addEventListener("input",render);
   $("oS").addEventListener("click",()=>{ST.up="S";$("oS").setAttribute("aria-pressed","true");$("oN").setAttribute("aria-pressed","false");render()});
   $("oN").addEventListener("click",()=>{ST.up="N";$("oN").setAttribute("aria-pressed","true");$("oS").setAttribute("aria-pressed","false");render()});
+  $("file").addEventListener("change",e=>{
+    const f=e.target.files&&e.target.files[0]; if(!f)return;
+    $("upState").textContent="识别中…";
+    const url=URL.createObjectURL(f), im=new Image();
+    im.onload=()=>{
+      const MAX=340, sc=Math.min(1,MAX/Math.max(im.width,im.height));
+      const W=Math.max(8,Math.round(im.width*sc)), H=Math.max(8,Math.round(im.height*sc));
+      const c=document.createElement("canvas");c.width=W;c.height=H;
+      const g=c.getContext("2d",{willReadFrequently:true});
+      g.drawImage(im,0,0,W,H);
+      BACKDROP={data:g.getImageData(0,0,W,H).data,W,H,url:c.toDataURL()};
+      URL.revokeObjectURL(url);
+      $("upTune").style.display="block";
+      detectPlan();
+    };
+    im.onerror=()=>{$("upState").textContent="图片读取失败";URL.revokeObjectURL(url);};
+    im.src=url;
+  });
+  $("reDetect").addEventListener("click",()=>{AUTO_R=true;$("thr").value=0;detectPlan();});
+  $("thr").addEventListener("change",detectPlan);
+  $("clo").addEventListener("change",()=>{AUTO_R=false;detectPlan();});
+  $("toggleImg").addEventListener("click",()=>{ST.showImg=!ST.showImg;
+    $("toggleImg").textContent=ST.showImg?"隐藏底图":"显示底图";render();});
+  $("dropImg").addEventListener("click",()=>{BACKDROP=null;$("upTune").style.display="none";
+    $("upState").textContent="";render();});
   bindCompass();bindPlan();render();
   // bfcache（前进/后退）恢复后，表单值可能被浏览器改写，重新同步一次
   window.addEventListener("pageshow",e=>{if(e.persisted){
