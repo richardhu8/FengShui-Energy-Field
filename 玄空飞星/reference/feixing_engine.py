@@ -222,3 +222,51 @@ def bazhai(zhai_palace):
 
 def is_east(palace):
     return palace in EAST4
+
+
+# ══════════ 户型九宫覆盖（井字法）══════════
+# 上北下南：row0=北 row2=南，col0=西 col2=东
+PLAN_CELL = [[6,1,8],[7,5,3],[2,9,4]]
+
+def poly_area(p):
+    s = 0.0
+    for i in range(len(p)):
+        x1,y1 = p[i]; x2,y2 = p[(i+1) % len(p)]
+        s += x1*y2 - x2*y1
+    return abs(s)/2
+
+def clip_rect(poly, x0, y0, x1, y1):
+    """Sutherland–Hodgman：多边形对轴对齐矩形裁剪"""
+    def stage(p, inside, inter):
+        out = []
+        for i in range(len(p)):
+            a = p[i]; b = p[(i+1) % len(p)]
+            ia, ib = inside(a), inside(b)
+            if ia and ib: out.append(b)
+            elif ia and not ib: out.append(inter(a,b))
+            elif not ia and ib: out.append(inter(a,b)); out.append(b)
+        return out
+    ix = lambda a,b,X: (X, a[1] + (X-a[0])/(b[0]-a[0])*(b[1]-a[1]))
+    iy = lambda a,b,Y: (a[0] + (Y-a[1])/(b[1]-a[1])*(b[0]-a[0]), Y)
+    p = poly
+    p = stage(p, lambda q: q[0] >= x0, lambda a,b: ix(a,b,x0));  
+    if not p: return p
+    p = stage(p, lambda q: q[0] <= x1, lambda a,b: ix(a,b,x1))
+    if not p: return p
+    p = stage(p, lambda q: q[1] >= y0, lambda a,b: iy(a,b,y0))
+    if not p: return p
+    p = stage(p, lambda q: q[1] <= y1, lambda a,b: iy(a,b,y1))
+    return p
+
+def plan_coverage(poly):
+    """户型多边形 → {宫位: 覆盖率 0..1}。覆盖率 < 0.6 视为缺角（经验阈值）。"""
+    xs = [p[0] for p in poly]; ys = [p[1] for p in poly]
+    x0,x1,y0,y1 = min(xs), max(xs), min(ys), max(ys)
+    w = (x1-x0)/3; h = (y1-y0)/3; cell_a = w*h
+    cov = {}
+    for r in range(3):
+        for c in range(3):
+            cx, cy = x0+c*w, y0+r*h
+            clipped = clip_rect(poly, cx, cy, cx+w, cy+h)
+            cov[PLAN_CELL[r][c]] = poly_area(clipped)/cell_a if cell_a else 0.0
+    return cov

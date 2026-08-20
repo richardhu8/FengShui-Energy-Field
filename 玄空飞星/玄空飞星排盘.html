@@ -104,6 +104,22 @@ svg.compass:active{cursor:grabbing}
 .bz-xiong{color:var(--cinnabar);background:color-mix(in srgb,var(--cinnabar) 9%,transparent)}
 .match{font-size:11.5px;padding:2px 7px;border-radius:2px;border:1px solid currentColor;
   display:inline-block;margin-top:6px}
+.planwrap{display:grid;grid-template-columns:minmax(260px,1fr) minmax(220px,300px);gap:20px;padding:18px}
+@media(max-width:820px){.planwrap{grid-template-columns:1fr}}
+svg.plan{width:100%;height:auto;display:block;background:var(--panel-2);
+  border:1px solid var(--edge);border-radius:2px;touch-action:none}
+svg.plan .vtx{fill:var(--cinnabar);cursor:grab}
+svg.plan .vtx:hover{r:7}
+.covrow{display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0}
+.covrow+.covrow{border-top:1px dotted var(--edge)}
+.covrow .nm{width:74px;color:var(--ink-3);flex:none}
+.bar{flex:1;height:7px;background:var(--edge);border-radius:1px;overflow:hidden}
+.bar i{display:block;height:100%}
+.covrow .pc{width:38px;text-align:right;font-variant-numeric:tabular-nums;flex:none}
+.tool{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.tool button{font:inherit;font-size:11.5px;padding:4px 10px;background:var(--panel-2);
+  color:var(--ink-2);border:1px solid var(--edge);border-radius:2px;cursor:pointer}
+.tool button:hover{border-color:var(--brass);color:var(--brass)}
 
 .verdict{padding:14px 18px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;
   border-top:1px solid var(--edge)}
@@ -192,6 +208,28 @@ footer code{background:var(--panel-2);padding:1px 4px;border-radius:2px}
         <p style="font-size:11px;color:var(--ink-3);margin:8px 0 0" id="legend"></p>
       </div>
     </div>
+    <div class="card planwrap">
+      <div>
+        <svg class="plan" id="plan" viewBox="0 0 360 360" role="img"
+             aria-label="户型九宫叠加图，可拖动顶点编辑轮廓"></svg>
+        <p style="font-size:11px;color:var(--ink-3);margin:8px 0 0">
+          户型按<b>上北下南</b>绘制 · 拖动<span style="color:var(--cinnabar)">红点</span>改轮廓 ·
+          井字法分九宫，按各宫被户型覆盖的面积比判缺角
+        </p>
+        <div class="tool">
+          <button id="pReset">恢复示例户型</button>
+          <button id="pSquare">改为方正户型</button>
+          <button id="pAdd">在最长边加点</button>
+        </div>
+      </div>
+      <div>
+        <h2 style="margin:0 0 8px;font-size:13px;letter-spacing:.14em;
+            font-family:'Songti SC','STSong',SimSun,serif">各宫覆盖率</h2>
+        <div id="cover"></div>
+        <p style="font-size:11px;color:var(--ink-3);margin:10px 0 0" id="covnote"></p>
+      </div>
+    </div>
+
     <div class="card">
       <div class="verdict">
         <span class="ge" id="ge">双星到向</span>
@@ -347,9 +385,47 @@ function mingua(year){
          li:`${li[1]}/${li[2]} ${String(Math.floor(li[3])).padStart(2,"0")}:${String(Math.round((li[3]%1)*60)).padStart(2,"0")}`};
 }
 
+/* ═══════ 户型几何 ═══════ */
+// 井字法：户型外接矩形 3×3。上北下南，故 row0=北 row2=南，col0=西 col2=东
+const PLAN_CELL=[[6,1,8],[7,5,3],[2,9,4]];
+function polyArea(p){let s=0;for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];
+  s+=a[0]*b[1]-b[0]*a[1];}return Math.abs(s)/2;}
+function clipRect(poly,x0,y0,x1,y1){            // Sutherland–Hodgman
+  const stage=(p,inside,inter)=>{const o=[];
+    for(let i=0;i<p.length;i++){const a=p[i],b=p[(i+1)%p.length];
+      const ia=inside(a),ib=inside(b);
+      if(ia&&ib)o.push(b);
+      else if(ia&&!ib)o.push(inter(a,b));
+      else if(!ia&&ib){o.push(inter(a,b));o.push(b);} }
+    return o;};
+  const ix=(a,b,X)=>{const t=(X-a[0])/(b[0]-a[0]);return[X,a[1]+t*(b[1]-a[1])];};
+  const iy=(a,b,Y)=>{const t=(Y-a[1])/(b[1]-a[1]);return[a[0]+t*(b[0]-a[0]),Y];};
+  let p=poly;
+  p=stage(p,q=>q[0]>=x0,(a,b)=>ix(a,b,x0)); if(!p.length)return p;
+  p=stage(p,q=>q[0]<=x1,(a,b)=>ix(a,b,x1)); if(!p.length)return p;
+  p=stage(p,q=>q[1]>=y0,(a,b)=>iy(a,b,y0)); if(!p.length)return p;
+  p=stage(p,q=>q[1]<=y1,(a,b)=>iy(a,b,y1)); return p;
+}
+function planAnalyze(poly){
+  const xs=poly.map(p=>p[0]),ys=poly.map(p=>p[1]);
+  const x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const w=(x1-x0)/3,h=(y1-y0)/3,cellA=w*h,cov={},cells={};
+  for(let r=0;r<3;r++)for(let c=0;c<3;c++){
+    const cx0=x0+c*w,cy0=y0+r*h;
+    const clipped=clipRect(poly,cx0,cy0,cx0+w,cy0+h);
+    const g=PLAN_CELL[r][c];
+    cov[g]=cellA>0?polyArea(clipped)/cellA:0;
+    cells[g]={x:cx0,y:cy0,w,h};
+  }
+  return{cov,cells,bbox:{x0,y0,x1,y1,w,h},total:polyArea(poly)};
+}
+const PLAN_L=[[40,40],[320,40],[320,320],[150,320],[150,220],[40,220]];
+const PLAN_SQ=[[45,45],[315,45],[315,315],[45,315]];
+
 /* ═══════ 状态 ═══════ */
 const $=id=>document.getElementById(id);
-let ST={deg:209.5,yun:9,date:"2026-08-17",time:"12:00",up:"S"};
+let ST={deg:209.5,yun:9,date:"2026-08-17",time:"12:00",up:"S",
+        plan:PLAN_L.map(p=>p.slice())};
 
 /* ═══════ 罗盘 ═══════ */
 const NS="http://www.w3.org/2000/svg";
@@ -439,6 +515,78 @@ function drawGrid(P,Z,BZ){
     `<span class="bz-xiong" style="padding:0 4px">四凶</span> · 盘面${ST.up==="S"?"上南下北":"上北下南"}`;
 }
 
+/* ═══════ 户型图 ═══════ */
+function drawPlan(P,BZ,A){
+  const s=$("plan");s.textContent="";
+  const {cells,bbox}=A;
+  // 九宫格底
+  Object.keys(cells).map(Number).forEach(g=>{
+    const c=cells[g],pc=A.cov[g];
+    const bad=pc<0.6, good=pc>=0.95;
+    s.appendChild(el("rect",{x:c.x,y:c.y,width:c.w,height:c.h,
+      fill:bad?"rgba(174,53,39,.13)":(good?"rgba(61,106,87,.09)":"rgba(138,106,31,.07)"),
+      stroke:"var(--edge)","stroke-width":.8}));
+    const t=el("text",{x:c.x+c.w/2,y:c.y+12,"text-anchor":"middle","font-size":9.5,
+      fill:"var(--ink-3)","letter-spacing":"1"});
+    t.textContent=PG[g][1]; s.appendChild(t);
+    if(g!==5){
+      const st=el("text",{x:c.x+c.w/2,y:c.y+c.h-16,"text-anchor":"middle","font-size":13,
+        "font-family":'"Songti SC","STSong",SimSun,serif',fill:"var(--ink-2)"});
+      st.textContent=`${P.sp[g]}·${P.xp[g]}`; s.appendChild(st);
+      if(BZ&&BZ[g]){const b=el("text",{x:c.x+c.w/2,y:c.y+c.h-5,"text-anchor":"middle",
+        "font-size":8.5,fill:JI4.includes(BZ[g])?"var(--jade)":"var(--cinnabar)"});
+        b.textContent=BZ[g]; s.appendChild(b);}
+    }
+    const p=el("text",{x:c.x+c.w-4,y:c.y+12,"text-anchor":"end","font-size":9,
+      fill:bad?"var(--cinnabar)":"var(--ink-3)"});
+    p.textContent=Math.round(pc*100)+"%"; s.appendChild(p);
+  });
+  // 户型轮廓
+  s.appendChild(el("polygon",{points:ST.plan.map(p=>p.join(",")).join(" "),
+    fill:"rgba(201,162,74,.10)",stroke:"var(--ink)","stroke-width":2.4,"stroke-linejoin":"round"}));
+  // 立极点（面积形心的简化：外接矩形中心）
+  const cx=(bbox.x0+bbox.x1)/2, cy=(bbox.y0+bbox.y1)/2;
+  s.appendChild(el("circle",{cx,cy,r:3,fill:"var(--brass)"}));
+  const lj=el("text",{x:cx+6,y:cy-5,"font-size":9,fill:"var(--brass)"});
+  lj.textContent="立极"; s.appendChild(lj);
+  // 指北
+  const n=el("text",{x:8,y:14,"font-size":10,fill:"var(--ink-3)","letter-spacing":"1"});
+  n.textContent="↑ 北"; s.appendChild(n);
+  // 顶点把手
+  ST.plan.forEach((pt,i)=>{
+    const h=el("circle",{cx:pt[0],cy:pt[1],r:5.5,class:"vtx","data-i":i});
+    s.appendChild(h);
+  });
+}
+function bindPlan(){
+  const s=$("plan"); let dragI=-1;
+  const toSvg=ev=>{const r=s.getBoundingClientRect();
+    return[(ev.clientX-r.left)/r.width*360,(ev.clientY-r.top)/r.height*360];};
+  s.addEventListener("pointerdown",e=>{
+    const i=e.target.getAttribute&&e.target.getAttribute("data-i");
+    if(i===null||i===undefined)return;
+    dragI=+i; s.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  s.addEventListener("pointermove",e=>{
+    if(dragI<0)return;
+    const[x,y]=toSvg(e);
+    ST.plan[dragI]=[Math.max(6,Math.min(354,Math.round(x))),
+                    Math.max(6,Math.min(354,Math.round(y)))];
+    render();
+  });
+  s.addEventListener("pointerup",()=>{dragI=-1;});
+  $("pReset").onclick =()=>{ST.plan=PLAN_L.map(p=>p.slice());render();};
+  $("pSquare").onclick=()=>{ST.plan=PLAN_SQ.map(p=>p.slice());render();};
+  $("pAdd").onclick   =()=>{  // 在最长边中点插一个顶点
+    let bi=0,bl=-1;
+    for(let i=0;i<ST.plan.length;i++){const a=ST.plan[i],b=ST.plan[(i+1)%ST.plan.length];
+      const L=Math.hypot(b[0]-a[0],b[1]-a[1]); if(L>bl){bl=L;bi=i;}}
+    const a=ST.plan[bi],b=ST.plan[(bi+1)%ST.plan.length];
+    ST.plan.splice(bi+1,0,[Math.round((a[0]+b[0])/2),Math.round((a[1]+b[1])/2)]);
+    render();
+  };
+}
+
 /* ═══════ 渲染 ═══════ */
 function render(){
   const P=pan(ST.yun,ST.deg);
@@ -455,8 +603,23 @@ function render(){
              :`<span class="t-brass">替卦（起星）</span> · 兼 ${P.off>0?"+":""}${P.off.toFixed(1)}°`)+
     `<br>山星 <b class="num">${P.se}</b> 入中·${P.sy==="阳"?"顺":"逆"}飞　向星 <b class="num">${P.xe}</b> 入中·${P.xy==="阳"?"顺":"逆"}飞`;
 
-  const zhai=P.S[1], BZ=bazhai(zhai);
-  drawCompass(P);drawGrid(P,Z,BZ);
+  const zhai=P.S[1], BZ=bazhai(zhai), A=planAnalyze(ST.plan);
+  drawCompass(P);drawGrid(P,Z,BZ);drawPlan(P,BZ,A);
+
+  // 覆盖率条
+  const order=[6,1,8,7,3,2,9,4];   // 八方，跳过中宫
+  $("cover").innerHTML=order.map(g=>{
+    const pc=A.cov[g], v=Math.round(pc*100);
+    const col=pc<0.6?"var(--cinnabar)":(pc>=0.95?"var(--jade)":"var(--brass)");
+    return `<div class="covrow"><span class="nm">${PG[g][0]}·${PG[g][1]}</span>`+
+      `<span class="bar"><i style="width:${v}%;background:${col}"></i></span>`+
+      `<span class="pc" style="color:${col}">${v}%</span></div>`;
+  }).join("");
+  const lack=order.filter(g=>A.cov[g]<0.6);
+  $("covnote").innerHTML=lack.length
+    ? `<span style="color:var(--cinnabar)">缺角</span>：${lack.map(g=>PG[g][1]).join("、")}　`+
+      `（覆盖率 &lt; 60% 判缺角，阈值为经验值，非古法定数）`
+    : `八方覆盖均衡，未见明显缺角。`;
 
   $("ge").textContent=P.ge;
   $("ge").className="ge "+(P.ge==="旺山旺向"?"t-jade":(P.ge==="上山下水"?"t-cin":""));
@@ -524,7 +687,22 @@ function render(){
     if(xkJi&&!bzJi) conflict.push(`${n} 玄空吉、八宅${b}凶`);
     if(xkXiong&&bzJi)conflict.push(`${n} 玄空凶、八宅${b}吉`);
   });
-  const all=notes.concat(agree);
+  // 缺角 × 玄空 × 八宅：缺在旺位才是真问题，缺在凶位反而无妨
+  const lackNotes=[];
+  order.forEach(g=>{
+    const pc=A.cov[g]; if(pc>=0.6)return;
+    const n=PG[g][0]+"宫（"+PG[g][1]+"）",v=Math.round(pc*100),b=BZ?BZ[g]:null;
+    const isWang=(P.xp[g]===W||P.sp[g]===W), isBad=(P.sp[g]===5||P.xp[g]===5||P.sp[g]===2||P.xp[g]===2);
+    const bzJi=b&&JI4.includes(b);
+    let judge;
+    if(isWang&&bzJi)      judge=`<b>影响最大</b> —— 此宫既是玄空当运${W}旺位，又是八宅${b}吉方，缺角等于把最该用的位置削掉了。`;
+    else if(isWang)       judge=`<b>影响较大</b> —— 玄空当运${W}${P.xp[g]===W?"向星财位":"山星丁位"}缺角，旺气无处落。`;
+    else if(bzJi)         judge=`影响中等 —— 八宅${b}吉方缺角，宅命层面的好位置用不上。`;
+    else if(isBad||(b&&!bzJi)) judge=`<span style="color:var(--jade)">影响不大</span> —— 此宫本为${isBad?"玄空凶星":"八宅"+b}之位，缺角反而少受其害。`;
+    else                  judge=`影响一般。`;
+    lackNotes.push(`<span class="s-sha">缺角</span>　${n}覆盖 ${v}%，${judge}`);
+  });
+  const all=notes.concat(agree).concat(lackNotes);
   if(conflict.length)all.push(`<span class="t-brass">两派分歧</span>　${conflict.join("；")}。玄空重时运、八宅重宅命，`+
     `分歧处本工具不替你裁决 —— 传统上以玄空当运星为主、八宅为辅，但需结合峦头实勘。`);
   $("notes").innerHTML=all.map(t=>`<li>${t}</li>`).join("")||"<li>本盘无显著吉凶偏向。</li>";
@@ -550,7 +728,7 @@ function render(){
   $("birth").addEventListener("input",render);
   $("oS").addEventListener("click",()=>{ST.up="S";$("oS").setAttribute("aria-pressed","true");$("oN").setAttribute("aria-pressed","false");render()});
   $("oN").addEventListener("click",()=>{ST.up="N";$("oN").setAttribute("aria-pressed","true");$("oS").setAttribute("aria-pressed","false");render()});
-  bindCompass();render();
+  bindCompass();bindPlan();render();
   // bfcache（前进/后退）恢复后，表单值可能被浏览器改写，重新同步一次
   window.addEventListener("pageshow",e=>{if(e.persisted){
     $("deg").value=ST.deg;$("degr").value=ST.deg;$("date").value=ST.date;

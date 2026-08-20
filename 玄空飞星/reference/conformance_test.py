@@ -114,6 +114,38 @@ for z in (1,2,3,4,6,7,8,9):
     check(f"BZ.{z}宅.东西", is_east(z), is_east([k for k,v in r.items() if v=="伏位"][0]))
 check("BZ.中宫无宅卦", bazhai(5), None)
 
-print(f"[含八宅] {TOTAL-len(FAILS)}/{TOTAL} passed")
+print(f"[含八宅] {TOTAL-len(FAILS)}/{TOTAL} checks so far")
+
+# ── 户型九宫覆盖（井字法几何）──
+from feixing_engine import plan_coverage, poly_area, clip_rect, PLAN_CELL
+SQ=[(0,0),(300,0),(300,300),(0,300)]
+LSHAPE=[(0,0),(300,0),(300,300),(100,300),(100,200),(0,200)]   # 缺左下(西南)
+TRI=[(0,0),(300,0),(0,300)]
+
+cov=plan_coverage(SQ)
+for g,v in cov.items(): check(f"PL.方正.{g}", round(v,6), 1.0)
+
+cov=plan_coverage(LSHAPE)
+check("PL.L形.西南缺角", round(cov[2],6), 0.0)          # 坤=2 西南
+for g in (6,1,8,7,3,9,4,5):                              # 其余满覆盖
+    check(f"PL.L形.{g}满", round(cov[g],6), 1.0)
+
+# 面积守恒：九宫裁剪面积之和 == 原多边形面积
+for name,poly in (("方正",SQ),("L形",LSHAPE),("三角",TRI)):
+    xs=[p[0] for p in poly]; ys=[p[1] for p in poly]
+    x0,x1,y0,y1=min(xs),max(xs),min(ys),max(ys); w=(x1-x0)/3; h=(y1-y0)/3
+    tot=sum(poly_area(clip_rect(poly,x0+c*w,y0+r*h,x0+(c+1)*w,y0+(r+1)*h))
+            for r in range(3) for c in range(3))
+    check(f"PL.{name}.面积守恒", round(tot,6), round(poly_area(poly),6))
+
+# 覆盖率恒在 [0,1]
+for name,poly in (("方正",SQ),("L形",LSHAPE),("三角",TRI)):
+    for g,v in plan_coverage(poly).items():
+        check(f"PL.{name}.{g}.域", -1e-9 <= v <= 1+1e-9, True)
+
+# 九宫格宫位映射：上北下南、左西右东
+check("PL.宫位映射", PLAN_CELL, [[6,1,8],[7,5,3],[2,9,4]])
+
+print(f"[含户型] {TOTAL-len(FAILS)}/{TOTAL} passed")
 for f in FAILS: print("  FAIL",f)
 sys.exit(1 if FAILS else 0)
