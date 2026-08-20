@@ -1,0 +1,289 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>八字合盘</title>
+<style>
+:root{
+  --ground:#E7E1D2; --panel:#F3EEE2; --panel-2:#EAE4D5; --edge:#CFC5AC;
+  --ink:#17130F; --ink-2:#4A4136; --ink-3:#7C7161;
+  --brass:#8A6A1F; --cinnabar:#AE3527; --jade:#3D6A57;
+  --lacquer:#14120E; --lacquer-ink:#E8E1CE;
+  --mu:#4E7C5B; --huo:#B0442F; --tu:#8A6A1F; --jin:#7C7161; --shui:#3C5C7C;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#100E0B; --panel:#191712; --panel-2:#211E18; --edge:#332E24;
+  --ink:#E9E2CF; --ink-2:#B3A992; --ink-3:#7E7562;
+  --brass:#C9A24A; --cinnabar:#CE5041; --jade:#6BA189;
+  --lacquer:#0B0A08; --lacquer-ink:#E9E2CF;
+  --mu:#7FB08C; --huo:#D9705C; --tu:#C9A24A; --jin:#B3A992; --shui:#7BA3C9;}}
+:root[data-theme="dark"]{
+  --ground:#100E0B; --panel:#191712; --panel-2:#211E18; --edge:#332E24;
+  --ink:#E9E2CF; --ink-2:#B3A992; --ink-3:#7E7562;
+  --brass:#C9A24A; --cinnabar:#CE5041; --jade:#6BA189;
+  --mu:#7FB08C; --huo:#D9705C; --tu:#C9A24A; --jin:#B3A992; --shui:#7BA3C9;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.serif{font-family:"Songti SC","STSong","Source Han Serif SC",SimSun,serif}
+header{background:var(--lacquer);color:var(--lacquer-ink);padding:16px 22px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;border-bottom:2px solid var(--brass)}
+header .mark{font-family:"Songti SC","STSong",SimSun,serif;font-size:19px;letter-spacing:.22em;color:var(--brass)}
+header .name{font-family:"Songti SC","STSong",SimSun,serif;font-size:16px;letter-spacing:.1em}
+nav.site{display:flex;gap:2px;margin-left:auto;align-items:center;flex-wrap:wrap}
+nav.site a{font-size:11.5px;letter-spacing:.1em;color:#9A8F78;text-decoration:none;
+  padding:4px 10px;border-radius:2px;white-space:nowrap}
+nav.site a:hover{color:var(--brass)}
+nav.site a[aria-current="page"]{color:var(--lacquer);background:var(--brass);font-weight:600}
+main{max-width:1100px;margin:0 auto;padding:20px;display:flex;flex-direction:column;gap:18px}
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:3px;padding:14px 16px}
+h2{margin:0 0 2px;font-size:13px;letter-spacing:.14em;font-weight:600;
+  font-family:"Songti SC","STSong",SimSun,serif}
+.hint{margin:0 0 12px;font-size:11.5px;color:var(--ink-3)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:760px){.two{grid-template-columns:1fr}}
+label{display:block;font-size:11.5px;color:var(--ink-3);letter-spacing:.08em;margin:8px 0 3px}
+input{width:100%;padding:7px 9px;background:var(--panel-2);color:var(--ink);
+  border:1px solid var(--edge);border-radius:2px;font:inherit;font-variant-numeric:tabular-nums}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;border:1px solid var(--edge);border-radius:2px;overflow:hidden;margin-top:8px}
+.seg button{flex:1;padding:5px 0;font:inherit;font-size:11.5px;background:var(--panel-2);
+  color:var(--ink-3);border:none;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--brass);color:var(--lacquer);font-weight:600}
+.pillars{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--edge);
+  border:1px solid var(--edge);border-radius:3px;overflow:hidden;margin-top:10px}
+.pillars>div{background:var(--panel);padding:6px 4px;text-align:center}
+.pillars .gz{font-family:"Songti SC","STSong",SimSun,serif;font-size:23px;line-height:1.1}
+.pillars small{display:block;font-size:10px;color:var(--ink-3)}
+.w0{color:var(--mu)} .w1{color:var(--huo)} .w2{color:var(--tu)}
+.w3{color:var(--jin)} .w4{color:var(--shui)}
+table{border-collapse:collapse;width:100%;font-size:12.5px;margin-top:8px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--edge);text-align:left;vertical-align:top}
+th{color:var(--ink-3);font-size:11px;letter-spacing:.08em;font-weight:600}
+.good{color:var(--jade);font-weight:600}
+.bad{color:var(--cinnabar);font-weight:600}
+.neu{color:var(--brass)}
+.brow{display:flex;align-items:center;gap:8px;font-size:12px;padding:2px 0}
+.brow .nm{width:24px;flex:none;font-family:"Songti SC","STSong",SimSun,serif;font-size:13px}
+.bar{flex:1;height:7px;background:var(--edge);border-radius:1px;overflow:hidden}
+.bar i{display:block;height:100%}
+.brow .v{width:60px;text-align:right;font-variant-numeric:tabular-nums;flex:none;color:var(--ink-3);font-size:11px}
+.note{font-size:11.5px;color:var(--ink-3);margin-top:10px}
+footer{max-width:1100px;margin:0 auto;padding:0 20px 40px;font-size:11.5px;color:var(--ink-3)}
+</style>
+
+<header>
+  <span class="mark">合盘</span><span class="name">八字关系比对</span>
+  <nav class="site">
+    <a href="./">门户</a><a href="paipan.html">排盘</a><a href="qiflow.html">炁流场</a>
+    <a href="waihuan.html">立极尺</a><a href="bazi.html">命书</a>
+    <a href="hepan.html" aria-current="page">合盘</a><a href="research.html">竞品拆解</a>
+  </nav>
+</header>
+
+<main>
+  <div class="card">
+    <h2>两造出生信息</h2>
+    <p class="hint">按北京时间（UTC+8）· 立春分年 · 节气定月</p>
+    <div class="two">
+      <div>
+        <div class="seg" role="group" aria-label="甲方性别">
+          <button data-s="A" data-v="1" aria-pressed="true">甲 · 乾造</button>
+          <button data-s="A" data-v="0" aria-pressed="false">甲 · 坤造</button>
+        </div>
+        <div class="row"><div><label for="ad">日期</label><input id="ad" type="date" value="1992-03-15"></div>
+          <div><label for="at">时刻</label><input id="at" type="time" value="09:20"></div></div>
+        <div id="apil"></div>
+      </div>
+      <div>
+        <div class="seg" role="group" aria-label="乙方性别">
+          <button data-s="B" data-v="1" aria-pressed="false">乙 · 乾造</button>
+          <button data-s="B" data-v="0" aria-pressed="true">乙 · 坤造</button>
+        </div>
+        <div class="row"><div><label for="bd">日期</label><input id="bd" type="date" value="1994-11-08"></div>
+          <div><label for="bt">时刻</label><input id="bt" type="time" value="21:40"></div></div>
+        <div id="bpil"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>日主关系</h2>
+    <p class="hint">日干为「我」，日支为配偶宫 —— 合盘首看这一柱</p>
+    <div id="core"></div>
+  </div>
+
+  <div class="card">
+    <h2>逐柱关系</h2>
+    <p class="hint">天干五合＝序号差5 · 六冲＝差6 · 六合＝和≡1 · 六害＝和≡7 · 三合＝同余mod4，均由索引推出</p>
+    <div style="overflow-x:auto"><table id="rel"></table></div>
+  </div>
+
+  <div class="card">
+    <h2>五行互补</h2>
+    <p class="hint">两盘五行合并（含藏干加权），看是否互补或同偏</p>
+    <div id="wx"></div>
+    <p class="note" id="wxNote"></p>
+  </div>
+</main>
+
+<footer>
+  合盘只做<b>结构关系的客观罗列</b>：哪两柱相合、相冲、相刑害，五行是互补还是同偏。
+  <b>不给「配不配」的结论</b> —— 传统合盘还需看用神喜忌、格局高低与实际相处，
+  单凭干支关系断定缘分深浅并不可靠。相刑无简单公式，按传世表。
+  传统文化科普，不构成婚恋或人生决策建议。
+</footer>
+
+<script>
+const GAN="甲乙丙丁戊己庚辛壬癸", ZHI="子丑寅卯辰巳午未申酉戌亥";
+const GAN_WX=[0,0,1,1,2,2,3,3,4,4], GAN_YY=[1,0,1,0,1,0,1,0,1,0];
+const ZHI_WX={子:4,丑:2,寅:0,卯:0,辰:2,巳:1,午:1,未:2,申:3,酉:3,戌:2,亥:4};
+const WX="木火土金水";
+const CANG={子:"癸",丑:"己癸辛",寅:"甲丙戊",卯:"乙",辰:"戊乙癸",巳:"丙庚戊",
+            午:"丁己",未:"己丁乙",申:"庚壬戊",酉:"辛",戌:"戊辛丁",亥:"壬甲"};
+const CW=[1.0,0.5,0.3];
+function shishen(d,o){
+  const di=GAN.indexOf(d),oi=GAN.indexOf(o);
+  const dw=GAN_WX[di],ow=GAN_WX[oi],same=GAN_YY[di]===GAN_YY[oi];
+  if(dw===ow)return same?"比肩":"劫财";
+  if((dw+1)%5===ow)return same?"食神":"伤官";
+  if((dw+2)%5===ow)return same?"偏财":"正财";
+  if((ow+2)%5===dw)return same?"七杀":"正官";
+  return same?"偏印":"正印";
+}
+/* ═══ 关系：全部由索引算术判定 ═══ */
+const gi=g=>GAN.indexOf(g), zi=z=>ZHI.indexOf(z);
+const WUHE_WX=[2,3,4,0,1];                       // 甲己合土 乙庚合金 丙辛合水 丁壬合木 戊癸合火
+const ganHe =(a,b)=>(gi(b)-gi(a)+10)%10===5;
+const ganHeWX=(a,b)=>WX[WUHE_WX[Math.min(gi(a),gi(b))%5]];
+const zhiChong=(a,b)=>(zi(b)-zi(a)+12)%12===6;
+const zhiHe   =(a,b)=>(zi(a)+zi(b))%12===1;
+const zhiHai  =(a,b)=>(zi(a)+zi(b))%12===7;
+const zhiSanhe=(a,b)=>a!==b&&zi(a)%4===zi(b)%4;
+const XING3=[["寅","巳","申"],["丑","戌","未"],["子","卯"]];
+const ZIXING=["辰","午","酉","亥"];
+const zhiXing=(a,b)=>(a===b&&ZIXING.includes(a))||
+  XING3.some(t=>t.includes(a)&&t.includes(b)&&a!==b);
+
+/* ═══ 历法（与命书页同源）═══ */
+const TZ=8;
+function jdUTC(y,m,d,h){if(m<=2){y--;m+=12}const a=Math.floor(y/100),b=2-a+Math.floor(a/4);
+  return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+b-1524.5+h/24}
+function jdToLocal(jd,tz){jd+=tz/24;let z=Math.floor(jd+.5),f=jd+.5-z,a=z;
+  if(z>=2299161){const al=Math.floor((z-1867216.25)/36524.25);a=z+1+al-Math.floor(al/4)}
+  const b=a+1524,c=Math.floor((b-122.1)/365.25),d=Math.floor(365.25*c),e=Math.floor((b-d)/30.6001);
+  const day=b-d-Math.floor(30.6001*e)+f,mo=e<14?e-1:e-13,yr=mo>2?c-4716:c-4715;
+  const di=Math.floor(day);return[yr,mo,di,(day-di)*24];}
+const norm=d=>((d%360)+360)%360;
+function sunLon(jd){const T=(jd-2451545)/36525;
+  const L0=280.46646+36000.76983*T+.0003032*T*T, M=357.52911+35999.05029*T-.0001537*T*T;
+  const r=M*Math.PI/180;
+  const C=(1.914602-.004817*T-.000014*T*T)*Math.sin(r)+(.019993-.000101*T)*Math.sin(2*r)+.000289*Math.sin(3*r);
+  const om=125.04-1934.136*T;return norm(L0+C-.00569-.00478*Math.sin(om*Math.PI/180));}
+function termJD(y,lon){let jd=jdUTC(y,1,1,0)+norm(lon-280)*365.2422/360;
+  for(let i=0;i<40;i++){let df=((sunLon(jd)-lon+180)%360+360)%360-180;jd-=df*365.2422/360}return jd;}
+const termLocal=(y,lon)=>jdToLocal(termJD(y,lon),TZ);
+const jdn=(y,m,d)=>Math.floor(jdUTC(y,m,d,12)+.5);
+const cyc=j=>((j-11)%60+60)%60;
+function pillars(y,m,d,h){
+  const li=termLocal(y,315);
+  const after=(m>li[1])||(m===li[1]&&(d>li[2]||(d===li[2]&&h>=li[3])));
+  const yy=after?y:y-1, yi=((yy-4)%60+60)%60;
+  const mi=Math.floor(norm(sunLon(jdUTC(y,m,d,h)-TZ/24)-315)/30);
+  const mg=((yi%10)%5*2+2+mi)%10;
+  let dj=jdn(y,m,d); if(h>=23)dj+=1;
+  const di=cyc(dj), hz=Math.floor(((h+1)%24)/2), hg=((di%10)%5*2+hz)%10;
+  return[[GAN[yi%10],ZHI[yi%12]],[GAN[mg],ZHI[(mi+2)%12]],
+         [GAN[di%10],ZHI[di%12]],[GAN[hg],ZHI[hz]]];
+}
+/* ═══ 渲染 ═══ */
+const $=id=>document.getElementById(id);
+let ST={A:1,B:0};
+const wxCls=g=>"w"+GAN_WX[GAN.indexOf(g)];
+const zwCls=z=>"w"+ZHI_WX[z];
+const NAMES=["年","月","日","时"];
+function drawPil(el,P){
+  el.innerHTML='<div class="pillars">'+P.map((gz,i)=>
+    `<div><small>${NAMES[i]}</small><span class="gz ${wxCls(gz[0])}">${gz[0]}</span>`+
+    `<span class="gz ${zwCls(gz[1])}">${gz[1]}</span></div>`).join("")+'</div>';
+}
+function wxOf(P){const c=[0,0,0,0,0];
+  P.forEach(([g,z])=>{c[GAN_WX[GAN.indexOf(g)]]+=1;
+    [...CANG[z]].forEach((h,i)=>c[GAN_WX[GAN.indexOf(h)]]+=CW[i]);});
+  return c;}
+function render(){
+  const[ay,am,ad_]=$("ad").value.split("-").map(Number);
+  const[ah,amn]=$("at").value.split(":").map(Number);
+  const[by,bm,bd_]=$("bd").value.split("-").map(Number);
+  const[bh,bmn]=$("bt").value.split(":").map(Number);
+  if(!ay||!by)return;
+  const A=pillars(ay,am,ad_,ah+amn/60), B=pillars(by,bm,bd_,bh+bmn/60);
+  drawPil($("apil"),A); drawPil($("bpil"),B);
+
+  // 日主关系
+  const ag=A[2][0], bg=B[2][0], az=A[2][1], bz=B[2][1];
+  const bits=[];
+  bits.push(`<tr><td>甲方日主</td><td><b class="${wxCls(ag)}">${ag}${WX[GAN_WX[gi(ag)]]}</b>`+
+    `（${GAN_YY[gi(ag)]?"阳":"阴"}）</td><td>视乙方日主为 <b>${shishen(ag,bg)}</b></td></tr>`);
+  bits.push(`<tr><td>乙方日主</td><td><b class="${wxCls(bg)}">${bg}${WX[GAN_WX[gi(bg)]]}</b>`+
+    `（${GAN_YY[gi(bg)]?"阳":"阴"}）</td><td>视甲方日主为 <b>${shishen(bg,ag)}</b></td></tr>`);
+  let dg="—";
+  if(ganHe(ag,bg))dg=`<span class="good">天干五合（化${ganHeWX(ag,bg)}）</span>`;
+  else if(GAN_WX[gi(ag)]===GAN_WX[gi(bg)])dg='<span class="neu">同五行</span>';
+  bits.push(`<tr><td>日干之间</td><td colspan="2">${dg}</td></tr>`);
+  let dz=[];
+  if(zhiHe(az,bz))dz.push('<span class="good">六合</span>');
+  if(zhiSanhe(az,bz))dz.push('<span class="good">三合局</span>');
+  if(zhiChong(az,bz))dz.push('<span class="bad">六冲</span>');
+  if(zhiHai(az,bz))dz.push('<span class="bad">六害</span>');
+  if(zhiXing(az,bz))dz.push('<span class="bad">相刑</span>');
+  if(az===bz)dz.push('<span class="neu">同支</span>');
+  bits.push(`<tr><td>日支之间<br><small style="color:var(--ink-3)">配偶宫</small></td>`+
+    `<td colspan="2">${dz.length?dz.join("、"):"—"}</td></tr>`);
+  $("core").innerHTML="<table>"+bits.join("")+"</table>";
+
+  // 逐柱关系
+  let rows='<tr><th>柱</th><th>甲方</th><th>乙方</th><th>天干</th><th>地支</th></tr>';
+  for(let i=0;i<4;i++){
+    const[g1,z1]=A[i],[g2,z2]=B[i];
+    let gr=ganHe(g1,g2)?`<span class="good">五合·化${ganHeWX(g1,g2)}</span>`:"—";
+    let zr=[];
+    if(zhiHe(z1,z2))zr.push('<span class="good">六合</span>');
+    if(zhiSanhe(z1,z2))zr.push('<span class="good">三合</span>');
+    if(zhiChong(z1,z2))zr.push('<span class="bad">六冲</span>');
+    if(zhiHai(z1,z2))zr.push('<span class="bad">六害</span>');
+    if(zhiXing(z1,z2))zr.push('<span class="bad">相刑</span>');
+    rows+=`<tr><td>${NAMES[i]}柱</td>`+
+      `<td class="serif" style="font-size:16px"><span class="${wxCls(g1)}">${g1}</span><span class="${zwCls(z1)}">${z1}</span></td>`+
+      `<td class="serif" style="font-size:16px"><span class="${wxCls(g2)}">${g2}</span><span class="${zwCls(z2)}">${z2}</span></td>`+
+      `<td>${gr}</td><td>${zr.length?zr.join("、"):"—"}</td></tr>`;
+  }
+  $("rel").innerHTML=rows;
+
+  // 五行互补
+  const ca=wxOf(A), cb=wxOf(B), tot=ca.map((v,i)=>v+cb[i]);
+  const mx=Math.max(...tot);
+  $("wx").innerHTML=tot.map((v,i)=>
+    `<div class="brow"><span class="nm w${i}">${WX[i]}</span>`+
+    `<span class="bar"><i style="width:${mx?v/mx*100:0}%;background:var(--${['mu','huo','tu','jin','shui'][i]})"></i></span>`+
+    `<span class="v">${ca[i].toFixed(1)}+${cb[i].toFixed(1)}</span></div>`).join("");
+  const weakA=ca.indexOf(Math.min(...ca)), weakB=cb.indexOf(Math.min(...cb));
+  const strongA=ca.indexOf(Math.max(...ca)), strongB=cb.indexOf(Math.max(...cb));
+  const comp=[];
+  if(strongB===weakA)comp.push(`乙方最旺的 <b>${WX[strongB]}</b> 正是甲方最弱处`);
+  if(strongA===weakB)comp.push(`甲方最旺的 <b>${WX[strongA]}</b> 正是乙方最弱处`);
+  if(strongA===strongB)comp.push(`<span class="neu">两盘同偏 <b>${WX[strongA]}</b></span>`);
+  const zero=tot.map((v,i)=>v<0.5?WX[i]:null).filter(Boolean);
+  $("wxNote").innerHTML=(comp.length?comp.join("；")+"。":"两盘五行分布无明显互补或同偏。")+
+    (zero.length?`　合并后仍缺 <b class="bad">${zero.join("、")}</b>。`:"")+
+    `<br><span style="color:var(--ink-3)">仅按加权计数，未计月令与调候；互补与否不等同于相处顺逆。</span>`;
+}
+["ad","at","bd","bt"].forEach(id=>$(id).addEventListener("input",render));
+document.querySelectorAll('[data-s]').forEach(b=>b.addEventListener("click",()=>{
+  const s=b.getAttribute("data-s");
+  ST[s]=+b.getAttribute("data-v");
+  document.querySelectorAll(`[data-s="${s}"]`).forEach(x=>
+    x.setAttribute("aria-pressed",x===b?"true":"false"));
+  render();
+}));
+render();
+</script>

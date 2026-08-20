@@ -436,3 +436,22 @@ def kongwang(day_cycle_index):
     head = day_cycle_index - (day_cycle_index % 10)
     hz = head % 12
     return ZHI12[(hz+10) % 12], ZHI12[(hz+11) % 12]
+
+
+# ══════════ 合盘：干支关系（全部由索引算术判定）══════════
+_gi = lambda g: GAN10.index(g)
+_zi = lambda z: ZHI12.index(z)
+WUHE_WX = [2,3,4,0,1]                       # 甲己合土 乙庚合金 丙辛合水 丁壬合木 戊癸合火
+
+def gan_he(a, b):     return (_gi(b)-_gi(a)) % 10 == 5
+def gan_he_wx(a, b):  return WUXING[WUHE_WX[min(_gi(a), _gi(b)) % 5]]
+def zhi_chong(a, b):  return (_zi(b)-_zi(a)) % 12 == 6
+def zhi_he(a, b):     return (_zi(a)+_zi(b)) % 12 == 1
+def zhi_hai(a, b):    return (_zi(a)+_zi(b)) % 12 == 7
+def zhi_sanhe(a, b):  return a != b and _zi(a) % 4 == _zi(b) % 4
+
+XING3 = [("寅","巳","申"), ("丑","戌","未"), ("子","卯")]
+ZIXING = ["辰","午","酉","亥"]
+def zhi_xing(a, b):
+    if a == b: return a in ZIXING
+    return any(a in t and b in t for t in XING3)

@@ -283,6 +283,40 @@ for d,exp in [(0,("戌","亥")),(10,("申","酉")),(20,("午","未")),
               (30,("辰","巳")),(40,("寅","卯")),(50,("子","丑"))]:
     check(f"KW.旬{d}", kongwang(d), exp)
 
-print(f"[含纳音神煞] {TOTAL-len(FAILS)}/{TOTAL} passed")
+print(f"[含纳音神煞] {TOTAL-len(FAILS)}/{TOTAL} checks so far")
+
+# ── 合盘：干支关系（索引算术 vs 传世表）──
+from feixing_engine import (gan_he, gan_he_wx, zhi_chong, zhi_he, zhi_hai,
+                            zhi_sanhe, zhi_xing)
+T_WUHE=[("甲","己"),("乙","庚"),("丙","辛"),("丁","壬"),("戊","癸")]
+T_HEWX=["土","金","水","木","火"]
+T_CHONG=[("子","午"),("丑","未"),("寅","申"),("卯","酉"),("辰","戌"),("巳","亥")]
+T_LIUHE=[("子","丑"),("寅","亥"),("卯","戌"),("辰","酉"),("巳","申"),("午","未")]
+T_SANHE=[("申","子","辰"),("亥","卯","未"),("寅","午","戌"),("巳","酉","丑")]
+T_HAI=[("子","未"),("丑","午"),("寅","巳"),("卯","辰"),("申","亥"),("酉","戌")]
+for (a,b),wx in zip(T_WUHE,T_HEWX):
+    check(f"HP.五合.{a}{b}", gan_he(a,b), True)
+    check(f"HP.五合化.{a}{b}", gan_he_wx(a,b), wx)
+for a,b in T_CHONG: check(f"HP.六冲.{a}{b}", zhi_chong(a,b), True)
+for a,b in T_LIUHE: check(f"HP.六合.{a}{b}", zhi_he(a,b), True)
+for a,b in T_HAI:   check(f"HP.六害.{a}{b}", zhi_hai(a,b), True)
+for t in T_SANHE:
+    for i in range(3):
+        for j in range(i+1,3):
+            check(f"HP.三合.{t[i]}{t[j]}", zhi_sanhe(t[i],t[j]), True)
+# 反推覆盖性：公式生成的组数须与传世表完全一致（不多不少）
+def gen(fn):
+    return {tuple(sorted((ZHI12[i],ZHI12[j])))
+            for i in range(12) for j in range(i+1,12) if fn(ZHI12[i],ZHI12[j])}
+check("HP.六合.覆盖", gen(zhi_he),    {tuple(sorted(p)) for p in T_LIUHE})
+check("HP.六害.覆盖", gen(zhi_hai),   {tuple(sorted(p)) for p in T_HAI})
+check("HP.六冲.覆盖", gen(zhi_chong), {tuple(sorted(p)) for p in T_CHONG})
+# 相刑
+for a,b in [("寅","巳"),("巳","申"),("寅","申"),("丑","戌"),("戌","未"),("子","卯")]:
+    check(f"HP.相刑.{a}{b}", zhi_xing(a,b), True)
+for z in ["辰","午","酉","亥"]: check(f"HP.自刑.{z}", zhi_xing(z,z), True)
+for z in ["子","丑","寅"]:      check(f"HP.非自刑.{z}", zhi_xing(z,z), False)
+
+print(f"[含合盘] {TOTAL-len(FAILS)}/{TOTAL} passed")
 for f in FAILS: print("  FAIL",f)
 sys.exit(1 if FAILS else 0)
