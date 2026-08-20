@@ -369,3 +369,14 @@ def wuxing_score(pillars):
 def dayun_dir(year_gan, male):
     """大运顺逆：阳年男 / 阴年女 → 顺；阴年男 / 阳年女 → 逆"""
     return (GAN_YY[GAN10.index(year_gan)] == 1) == bool(male)
+
+
+# ══════════ 真太阳时 ══════════
+def eot_minutes(day_of_year):
+    """均时差（分钟）：真太阳时 − 平太阳时。全年约 −14.6 ~ +16.5"""
+    B = 2*_math.pi*(day_of_year-81)/364.0
+    return 9.87*_math.sin(2*B) - 7.53*_math.cos(B) - 1.5*_math.sin(B)
+
+def true_solar_offset(day_of_year, lon, std_meridian=120.0):
+    """返回 (经度时差, 均时差) 分钟。东经为正。"""
+    return (lon-std_meridian)*4.0, eot_minutes(day_of_year)

@@ -105,10 +105,22 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;font-size:11.5px;color
       <div><label for="bd">出生日期</label><input id="bd" type="date" value="2000-05-20"></div>
       <div><label for="bt">出生时刻</label><input id="bt" type="time" value="14:30"></div>
     </div>
+    <label style="display:flex;align-items:center;gap:7px;margin-top:14px;cursor:pointer">
+      <input id="tst" type="checkbox" style="width:auto;margin:0">
+      <span style="color:var(--ink-2);font-size:12.5px">真太阳时校正</span>
+    </label>
+    <div id="tstBox" style="display:none;margin-top:8px">
+      <label for="city">出生地</label>
+      <select id="city"></select>
+      <label for="lon" style="margin-top:8px">经度（东经为正）<b id="lonV"></b></label>
+      <input id="lon" type="number" step="0.01" min="-180" max="180" value="116.41">
+      <div id="tstInfo" class="note"></div>
+    </div>
     <div id="meta" style="margin-top:12px"></div>
     <p class="note">
-      时柱以两小时一支划分，<b>23:00 起为次日子时</b>。真太阳时校正未实现，
-      异地出生请自行换算为北京时间。</p>
+      时柱以两小时一支划分，<b>23:00 起为次日子时</b>。
+      异地出生建议勾选<b>真太阳时校正</b> —— 乌鲁木齐经度时差达 −130 分钟，
+      足以跨越一个时辰、改变时柱。</p>
   </div>
 
   <div style="display:flex;flex-direction:column;gap:18px">
@@ -130,7 +142,9 @@ footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;font-size:11.5px;color
 </main>
 
 <footer>
-  四柱与大运由本页历法内核实算（节气用天文算法求解，非查表）。<b>周岁标注</b>：
+  四柱与大运由本页历法内核实算（节气用天文算法求解，非查表）。
+  <b>真太阳时</b>校正含经度时差（每度 4 分钟）与均时差（全年 −14.6 ~ +16.5 分），
+  校正后若跨日会按校正后的真实日期重排四柱。<b>周岁标注</b>：
   起运岁数按周岁计，部分排盘程序用虚岁，故可能相差一岁 —— 干支序列本身一致。
   传统命理文化科普，内容仅供参考，不构成医疗、投资、法律或人生决策建议。
 </footer>
@@ -211,9 +225,34 @@ function dayun(y,m,d,h,male){
   return{P,fwd,yrs,mons,days,seq};
 }
 
+
+/* ═══ 真太阳时校正 ═══ */
+const CITIES=[["北京",116.41],["上海",121.47],["广州",113.26],["深圳",114.06],
+["成都",104.07],["重庆",106.55],["西安",108.95],["武汉",114.31],["杭州",120.15],
+["南京",118.80],["天津",117.20],["沈阳",123.43],["哈尔滨",126.53],["长春",125.32],
+["济南",117.00],["郑州",113.62],["长沙",112.94],["福州",119.30],["昆明",102.83],
+["贵阳",106.63],["南宁",108.37],["兰州",103.83],["西宁",101.78],["银川",106.23],
+["呼和浩特",111.75],["太原",112.55],["石家庄",114.51],["合肥",117.28],["南昌",115.89],
+["海口",110.20],["拉萨",91.14],["乌鲁木齐",87.62],["喀什",75.99],
+["香港",114.17],["澳门",113.55],["台北",121.56],["东京",139.69],["首尔",126.98],
+["新加坡",103.82]];
+// 均时差（分钟）：真太阳时 − 平太阳时
+function eotMin(y,m,d){
+  const start=Date.UTC(y,0,1), cur=Date.UTC(y,m-1,d);
+  const n=Math.floor((cur-start)/86400000)+1;
+  const B=2*Math.PI*(n-81)/364;
+  return 9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B);
+}
+// 返回校正后的小时（相对北京时间的十进制小时，可能越界到前后一天）
+function trueSolar(y,m,d,h,lon){
+  const dLon=(lon-120)*4;          // 经度时差（分钟）
+  const dEot=eotMin(y,m,d);        // 均时差（分钟）
+  return{h:h+(dLon+dEot)/60, dLon, dEot};
+}
+
 /* ═══ 渲染 ═══ */
 const $=id=>document.getElementById(id);
-let ST={male:true,sel:0};
+let ST={male:true,sel:0,tst:false,lon:116.41};
 const wxCls=g=>"w"+GAN_WX[GAN.indexOf(g)];
 const zwCls=z=>"w"+ZHI_WX[z];
 
@@ -221,8 +260,29 @@ function render(){
   const[y,m,d]=$("bd").value.split("-").map(Number);
   const[hh,mm]=$("bt").value.split(":").map(Number);
   if(!y||isNaN(hh))return;
-  const h=hh+mm/60;
-  const R=dayun(y,m,d,h,ST.male), P=R.P, day=P.D[0];
+  let h=hh+mm/60, dayShift=0, corr=null;
+  if(ST.tst){
+    corr=trueSolar(y,m,d,h,ST.lon);
+    h=corr.h;
+    while(h<0){h+=24;dayShift-=1;}          // 越界到前一日
+    while(h>=24){h-=24;dayShift+=1;}        // 越界到次日
+  }
+  // 校正若跨日，需以校正后的真实日期起四柱
+  let Y=y,M=m,D=d;
+  if(dayShift){
+    const t=new Date(Date.UTC(y,m-1,d)+dayShift*86400000);
+    Y=t.getUTCFullYear();M=t.getUTCMonth()+1;D=t.getUTCDate();
+  }
+  const R=dayun(Y,M,D,h,ST.male), P=R.P, day=P.D[0];
+  if(ST.tst&&corr){
+    const hh2=Math.floor(h), mm2=Math.round((h-hh2)*60);
+    $("tstInfo").innerHTML=
+      `经度时差 <b>${corr.dLon>=0?"+":""}${corr.dLon.toFixed(1)}</b> 分 · `+
+      `均时差 <b>${corr.dEot>=0?"+":""}${corr.dEot.toFixed(1)}</b> 分<br>`+
+      `真太阳时 <b>${dayShift?(dayShift>0?"次日 ":"前日 "):""}`+
+      `${String(hh2).padStart(2,"0")}:${String(mm2).padStart(2,"0")}</b>`+
+      `　时支 <b>${ZHI[Math.floor(((h+1)%24)/2)]}</b>`;
+  }
 
   // 四柱表
   const cols=[["年",P.Y],["月",P.M],["日",P.D],["时",P.H]];
@@ -258,7 +318,7 @@ function render(){
 
   // 生肖 / 起运
   $("meta").innerHTML=
-    `<div class="kv"><span>四柱</span><b class="serif">${P.Y.join("")} ${P.M.join("")} ${P.D.join("")} ${P.H.join("")}</b></div>`+
+    `<div class="kv"><span>四柱${ST.tst?" <small style=\"color:var(--brass)\">真太阳时</small>":""}</span><b class="serif">${P.Y.join("")} ${P.M.join("")} ${P.D.join("")} ${P.H.join("")}</b></div>`+
     `<div class="kv"><span>生肖</span><b>${SX[P.yi%12]}</b></div>`+
     `<div class="kv"><span>命造</span><b>${ST.male?"乾造 · 男":"坤造 · 女"}</b></div>`+
     `<div class="kv"><span>大运</span><b>${R.fwd?"顺排":"逆排"}</b></div>`+
@@ -285,5 +345,19 @@ $("gM").onclick=()=>{ST.male=true;ST.sel=0;$("gM").setAttribute("aria-pressed","
   $("gF").setAttribute("aria-pressed","false");render();};
 $("gF").onclick=()=>{ST.male=false;ST.sel=0;$("gF").setAttribute("aria-pressed","true");
   $("gM").setAttribute("aria-pressed","false");render();};
+(function(){
+  const sel=$("city");
+  CITIES.forEach(([n,lo])=>{const o=document.createElement("option");
+    o.value=lo;o.textContent=n+"（"+lo.toFixed(2)+"°E）";sel.appendChild(o);});
+  sel.value=String(ST.lon);
+  sel.addEventListener("change",e=>{ST.lon=+e.target.value;$("lon").value=ST.lon;render();});
+  $("lon").addEventListener("input",e=>{ST.lon=+e.target.value||0;render();});
+  $("tst").addEventListener("change",e=>{
+    ST.tst=e.target.checked;
+    $("tstBox").style.display=ST.tst?"block":"none";
+    if(!ST.tst)$("tstInfo").innerHTML="";
+    render();
+  });
+})();
 render();
 </script>

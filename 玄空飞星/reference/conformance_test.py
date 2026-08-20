@@ -206,6 +206,28 @@ check("BZ.阳年女逆", dayun_dir("庚",False), False)
 check("BZ.阴年男逆", dayun_dir("辛",True),  False)
 check("BZ.阴年女顺", dayun_dir("辛",False), True)
 
-print(f"[含八字] {TOTAL-len(FAILS)}/{TOTAL} passed")
+print(f"[含八字] {TOTAL-len(FAILS)}/{TOTAL} checks so far")
+
+# ── 真太阳时 ──
+from feixing_engine import eot_minutes, true_solar_offset
+import datetime as _dt
+# 均时差全年极值应接近 +16.4 / −14.2（天文参考值）
+vals=[eot_minutes(n) for n in range(1,366)]
+check("TS.均时差最大", 15.5 <= max(vals) <= 17.0, True)
+check("TS.均时差最小", -15.5 <= min(vals) <= -13.5, True)
+# 次极值符号：5 月中为正、7 月底为负
+check("TS.5月中为正", eot_minutes(134) > 0, True)
+check("TS.7月底为负", eot_minutes(207) < 0, True)
+# 经度时差：每度 4 分钟，东经>120 为正
+for lon,exp in [(120.0,0.0),(121.0,4.0),(119.0,-4.0),(87.62,(87.62-120)*4)]:
+    d,_=true_solar_offset(140,lon)
+    check(f"TS.经度差{lon}", round(d,6), round(exp,6))
+# 外部锚点：xunq.chat 2000-05-20 乌鲁木齐 报 经度差 -130 分 / 均时差 3.5 分
+n=_dt.date(2000,5,20).timetuple().tm_yday
+dl,de=true_solar_offset(n,87.62)
+check("TS.锚点.经度差", abs(dl-(-130)) < 1.0, True)
+check("TS.锚点.均时差", abs(de-3.5) < 1.0, True)
+
+print(f"[含真太阳时] {TOTAL-len(FAILS)}/{TOTAL} passed")
 for f in FAILS: print("  FAIL",f)
 sys.exit(1 if FAILS else 0)
