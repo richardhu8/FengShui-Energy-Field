@@ -164,6 +164,31 @@ header .sub{display:none}
           <div><label for="deg">向首度数</label><input id="deg" type="number" min="0" max="359.9" step="0.1" value="209.5"></div>
           <div><label for="yun">元运中宫</label><select id="yun"></select></div>
         </div>
+        <div class="tool" style="margin-top:10px">
+          <button id="gyroBtn">🧭 实景罗盘</button>
+          <span id="gyroState" style="font-size:11px;color:var(--ink-3);align-self:center"></span>
+        </div>
+        <div id="gyroBox" style="display:none;margin-top:10px;padding:10px;
+             background:var(--panel-2);border:1px solid var(--edge);border-radius:2px">
+          <div style="display:flex;align-items:center;gap:12px">
+            <svg id="gyroDial" viewBox="0 0 120 120" style="width:96px;height:96px;flex:none"></svg>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:11.5px;color:var(--ink-3)">手机朝向</div>
+              <div class="serif" id="gyroDeg" style="font-size:25px;letter-spacing:.04em">—</div>
+              <div style="font-size:11px;color:var(--ink-3)" id="gyroSrc"></div>
+            </div>
+          </div>
+          <label for="decl" style="display:flex;justify-content:between;margin-top:10px">
+            <span>磁偏角修正 <b id="declV">0.0°</b></span></label>
+          <input id="decl" type="range" min="-25" max="25" step="0.5" value="0">
+          <div class="tool" style="margin-top:8px">
+            <button id="gyroLock">锁定为向首</button>
+            <button id="gyroStop">停止</button>
+          </div>
+          <p style="font-size:11px;color:var(--ink-3);margin:8px 0 0">
+            把手机<b>背面贴住墙面并平放</b>，屏幕朝上、机顶指向屋外，读数即为向首方位角。
+            安卓读到的是<b>磁北</b>，需按当地磁偏角修正；iOS 已修正为真北。</p>
+        </div>
         <input id="degr" type="range" min="0" max="359.9" step="0.1" value="209.5" style="margin-top:10px" aria-label="向首度数滑杆">
         <div class="readout">
           <div class="big serif" id="zx">丑山未向</div>
@@ -1091,6 +1116,82 @@ async function aiSend(){
   }finally{ clearTimeout(t); aiBusy=false; $("aiSend").disabled=false; }
 }
 
+
+/* ═══════ 实景罗盘（陀螺仪 / 磁力计）═══════ */
+let gyroOn=false, gyroHeading=null, gyroTrue=false, gyroHandler=null;
+function drawDial(){
+  const s=$("gyroDial"); s.textContent="";
+  const cx=60,cy=60;
+  s.appendChild(el("circle",{cx,cy,r:56,fill:"var(--lacquer)",stroke:"var(--brass)","stroke-width":1}));
+  const h=gyroHeading==null?0:gyroHeading;
+  // 表盘随手机朝向反向旋转，使"北"始终指向真实北方
+  const g=el("g",{transform:`rotate(${-h} ${cx} ${cy})`});
+  [["北",0],["东",90],["南",180],["西",270]].forEach(([nm,a])=>{
+    const r=(a-90)*Math.PI/180;
+    const t=el("text",{x:cx+42*Math.cos(r),y:cy+42*Math.sin(r),"text-anchor":"middle",
+      "dominant-baseline":"central","font-size":11,
+      "font-family":'"Songti SC","STSong",SimSun,serif',
+      fill:a===0?"var(--cinnabar)":"var(--brass)"});
+    t.textContent=nm; g.appendChild(t);
+  });
+  for(let a=0;a<360;a+=15){
+    const r=(a-90)*Math.PI/180, L=a%90===0?9:5;
+    g.appendChild(el("line",{x1:cx+54*Math.cos(r),y1:cy+54*Math.sin(r),
+      x2:cx+(54-L)*Math.cos(r),y2:cy+(54-L)*Math.sin(r),
+      stroke:"rgba(201,162,74,.55)","stroke-width":.8}));
+  }
+  s.appendChild(g);
+  // 固定指针：始终指向屏幕上方 = 机顶方向
+  s.appendChild(el("line",{x1:cx,y1:cy,x2:cx,y2:cy-46,stroke:"var(--cinnabar)","stroke-width":2}));
+  s.appendChild(el("circle",{cx,cy,r:3,fill:"var(--brass)"}));
+}
+function gyroUpdate(){
+  const d=+$("decl").value;
+  $("declV").textContent=d.toFixed(1)+"°";
+  if(gyroHeading==null){$("gyroDeg").textContent="—";return;}
+  const corrected=norm(gyroHeading+(gyroTrue?0:d));
+  $("gyroDeg").textContent=corrected.toFixed(1)+"°";
+  $("gyroSrc").textContent=gyroTrue?"iOS 真北（已含磁偏角）":"磁北 + 手动修正";
+  drawDial();
+}
+function gyroStart(){
+  const attach=()=>{
+    gyroHandler=(e)=>{
+      let h=null, isTrue=false;
+      if(typeof e.webkitCompassHeading==="number"&&!isNaN(e.webkitCompassHeading)){
+        h=e.webkitCompassHeading; isTrue=true;              // iOS：真北
+      }else if(e.absolute&&typeof e.alpha==="number"){
+        h=norm(360-e.alpha); isTrue=false;                  // Android 绝对朝向：磁北
+      }else if(typeof e.alpha==="number"){
+        h=norm(360-e.alpha); isTrue=false;                  // 相对朝向，精度差
+      }
+      if(h!=null){gyroHeading=h;gyroTrue=isTrue;gyroUpdate();}
+    };
+    window.addEventListener("deviceorientationabsolute",gyroHandler,true);
+    window.addEventListener("deviceorientation",gyroHandler,true);
+    gyroOn=true;
+    $("gyroBox").style.display="block";
+    $("gyroState").textContent="已启动，转动手机试试";
+    drawDial();
+  };
+  const DOE=window.DeviceOrientationEvent;
+  if(!DOE){$("gyroState").textContent="此设备/浏览器不支持方向传感器";return;}
+  if(typeof DOE.requestPermission==="function"){        // iOS 13+ 需手势授权
+    DOE.requestPermission().then(r=>{
+      if(r==="granted")attach();
+      else $("gyroState").textContent="未授权访问方向传感器";
+    }).catch(()=>{$("gyroState").textContent="授权失败（需 HTTPS）";});
+  }else attach();
+}
+function gyroStop(){
+  if(gyroHandler){
+    window.removeEventListener("deviceorientationabsolute",gyroHandler,true);
+    window.removeEventListener("deviceorientation",gyroHandler,true);
+  }
+  gyroHandler=null;gyroOn=false;gyroHeading=null;
+  $("gyroBox").style.display="none";$("gyroState").textContent="";
+}
+
 /* ═══════ 绑定 ═══════ */
 (function init(){
   // 与炁流场页共享：优先采用已保存的户型与坐向
@@ -1143,6 +1244,16 @@ async function aiSend(){
     $("toggleImg").textContent=ST.showImg?"隐藏底图":"显示底图";render();});
   $("dropImg").addEventListener("click",()=>{BACKDROP=null;$("upTune").style.display="none";
     $("upState").textContent="";render();});
+  $("gyroBtn").addEventListener("click",()=>{gyroOn?gyroStop():gyroStart();});
+  $("gyroStop").addEventListener("click",gyroStop);
+  $("decl").addEventListener("input",gyroUpdate);
+  $("gyroLock").addEventListener("click",()=>{
+    if(gyroHeading==null){$("gyroState").textContent="还没读到朝向";return;}
+    ST.deg=norm(gyroHeading+(gyroTrue?0:+$("decl").value));
+    $("deg").value=ST.deg.toFixed(1);$("degr").value=ST.deg;
+    $("gyroState").textContent="已锁定 "+ST.deg.toFixed(1)+"°";
+    render();
+  });
   $("aiSend").addEventListener("click",aiSend);
   $("aiQ").addEventListener("keydown",e=>{if(e.key==="Enter")aiSend();});
   if(!AI_ENDPOINT)$("aiFoot").innerHTML=
