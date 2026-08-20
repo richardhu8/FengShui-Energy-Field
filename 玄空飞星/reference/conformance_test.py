@@ -91,6 +91,29 @@ for yun in range(1,10):
         for k in ("山星盘","向星盘"):
             check(f"TI.{yun}运{r['坐向']}.{k}",sorted(r[k].values()),list(range(1,10)))
 
-print(f"[含替卦] {TOTAL-len(FAILS)}/{TOTAL} passed")
+print(f"[含替卦] {TOTAL-len(FAILS)}/{TOTAL} checks so far")
+
+# ── 八宅明镜：游年变爻法，与经典游年歌比对 ──
+from feixing_engine import bazhai, JI4, XIONG4, is_east
+CLASSIC={
+ 8:{"生气":2,"五鬼":1,"延年":7,"六煞":3,"祸害":9,"天医":6,"绝命":4,"伏位":8},   # 艮宅
+ 1:{"生气":4,"五鬼":8,"延年":9,"六煞":6,"祸害":7,"天医":3,"绝命":2,"伏位":1},   # 坎宅
+ 6:{"生气":7,"五鬼":3,"延年":2,"六煞":1,"祸害":4,"天医":8,"绝命":9,"伏位":6},   # 乾宅
+}
+for z,exp in CLASSIC.items():
+    got=bazhai(z)
+    check(f"BZ.{z}宅", {v:k for k,v in got.items()}, exp)
+
+# 八宅结构自洽：每宅游年必为八方的一个排列（无重无漏）
+for z in (1,2,3,4,6,7,8,9):
+    r=bazhai(z)
+    check(f"BZ.{z}宅.排列", sorted(r.keys()), sorted([1,2,3,4,6,7,8,9]))
+    check(f"BZ.{z}宅.八名",  sorted(r.values()), sorted(JI4+XIONG4))
+    check(f"BZ.{z}宅.伏位",  [k for k,v in r.items() if v=="伏位"], [z])
+    # 伏位必与宅卦同东西四命属性
+    check(f"BZ.{z}宅.东西", is_east(z), is_east([k for k,v in r.items() if v=="伏位"][0]))
+check("BZ.中宫无宅卦", bazhai(5), None)
+
+print(f"[含八宅] {TOTAL-len(FAILS)}/{TOTAL} passed")
 for f in FAILS: print("  FAIL",f)
 sys.exit(1 if FAILS else 0)

@@ -97,6 +97,13 @@ svg.compass:active{cursor:grabbing}
 .s-norm{color:var(--ink-2)}
 .badge{position:absolute;top:5px;right:6px;font-size:9.5px;letter-spacing:.06em;
   color:var(--ink-3);border:1px solid var(--edge);border-radius:2px;padding:0 3px}
+.cell{padding-bottom:20px}
+.bz{position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:10px;
+  letter-spacing:.14em;padding:2px 0;border-top:1px solid var(--edge);cursor:help}
+.bz-ji{color:var(--jade);background:color-mix(in srgb,var(--jade) 10%,transparent)}
+.bz-xiong{color:var(--cinnabar);background:color-mix(in srgb,var(--cinnabar) 9%,transparent)}
+.match{font-size:11.5px;padding:2px 7px;border-radius:2px;border:1px solid currentColor;
+  display:inline-block;margin-top:6px}
 
 .verdict{padding:14px 18px;display:flex;gap:18px;align-items:center;flex-wrap:wrap;
   border-top:1px solid var(--edge)}
@@ -158,6 +165,11 @@ footer code{background:var(--panel-2);padding:1px 4px;border-radius:2px}
         <div class="row" style="margin-top:10px" id="mingua"></div>
       </div>
       <div class="sec">
+        <h2>八宅明镜</h2>
+        <p class="hint">以坐山定宅卦 · 游年变爻定四吉四凶</p>
+        <div id="bazhai"></div>
+      </div>
+      <div class="sec">
         <h2>盘面方位</h2>
         <div class="seg" role="group" aria-label="九宫盘方位">
           <button id="oS" aria-pressed="true">上南（传统）</button>
@@ -216,6 +228,25 @@ const GAN="甲乙丙丁戊己庚辛壬癸",ZHI="子丑寅卯辰巳午未申酉�
 const GUA={1:["坎","水","东四"],2:["坤","土","西四"],3:["震","木","东四"],4:["巽","木","东四"],
            6:["乾","金","西四"],7:["兑","金","西四"],8:["艮","土","西四"],9:["离","火","东四"]};
 const XIAGUA=4.5;
+// ── 八宅明镜：游年变爻法推导（不用现成表）──
+// 三爻 (初,二,三)=(下,中,上)，1=阳 0=阴
+const YAO={1:[0,1,0],2:[0,0,0],3:[1,0,0],4:[0,1,1],6:[1,1,1],7:[1,1,0],8:[0,0,1],9:[1,0,1]};
+const BYYAO={};Object.keys(YAO).forEach(k=>BYYAO[YAO[k].join("")]=+k);
+// 变爻序：上→中→下→中→上→中→下→中
+const YSEQ=[[2,"生气"],[1,"五鬼"],[0,"延年"],[1,"六煞"],[2,"祸害"],[1,"天医"],[0,"绝命"],[1,"伏位"]];
+const JI4=["生气","延年","天医","伏位"], XIONG4=["祸害","六煞","五鬼","绝命"];
+const YMEAN={生气:"旺财旺事业，宜主卧、书房、大门",延年:"旺婚姻感情，宜夫妻卧室",
+  天医:"利健康，宜老人房、静养",伏位:"平稳，宜储物、次卧",
+  祸害:"主小人破财，忌财位书房",六煞:"主烂桃花是非，忌卧室",
+  五鬼:"主火灾口舌，忌厨房电器",绝命:"最凶，宜作厕所储物"};
+function bazhai(zhaiPalace){           // 宅卦洛书数 → {宫: 游年名}
+  if(!YAO[zhaiPalace])return null;
+  const y=YAO[zhaiPalace].slice(), out={};
+  YSEQ.forEach(([i,name])=>{y[i]^=1;out[BYYAO[y.join("")]]=name;});
+  return out;                          // {palace: 游年名}
+}
+const EAST4=[1,3,4,9];                 // 东四宅/命
+const isEast=g=>EAST4.includes(g);
 // 替星口诀（山名→替星），恒为 {1,2,6,7,9}
 const TIXING={};
 [[1,"子癸甲申"],[2,"壬卯乙未坤"],[6,"乾亥辰巽巳戌"],[7,"酉辛丑艮丙"],[9,"寅午庚丁"]]
@@ -383,7 +414,7 @@ function starClass(v,yun){
   if(v===5||v===2)return"s-sha";
   return"s-norm";
 }
-function drawGrid(P,Z){
+function drawGrid(P,Z,BZ){
   const layS=[[4,9,2],[3,5,7],[8,1,6]];     // 上南
   const layN=[[8,1,6],[3,5,7],[4,9,2]];     // 上北
   const lay=ST.up==="S"?layS:layN;
@@ -398,12 +429,14 @@ function drawGrid(P,Z){
         <span class="st ${starClass(P.sp[k],P.yun)}">${P.sp[k]}<small>山</small></span>
         <span class="st ${starClass(P.xp[k],P.yun)}">${P.xp[k]}<small>向</small></span>
       </div>
-      <div class="foot"><span>运 ${P.yp[k]}</span><span>年 ${Z.yearPan[k]}</span></div>`;
+      <div class="foot"><span>运 ${P.yp[k]}</span><span>年 ${Z.yearPan[k]}</span></div>
+      ${BZ&&BZ[k]?`<div class="bz ${JI4.includes(BZ[k])?"bz-ji":"bz-xiong"}" title="${YMEAN[BZ[k]]}">${BZ[k]}</div>`:""}`;
     g.appendChild(d);
   });
-  $("legend").innerHTML=`每宫：<b class="serif">山星</b> / <b class="serif">向星</b>，下行为运盘与流年飞星。`+
+  $("legend").innerHTML=`每宫：<b class="serif">山星</b> / <b class="serif">向星</b>，下行为运盘与流年飞星，底栏为八宅游年。`+
     `<span class="s-wang">当运${P.yun}</span> · <span class="s-sheng">生气${P.yun%9+1}</span> · `+
-    `<span class="s-sha">五黄二黑</span> · 盘面${ST.up==="S"?"上南下北":"上北下南"}`;
+    `<span class="s-sha">五黄二黑</span> · <span class="bz-ji" style="padding:0 4px">八宅四吉</span>`+
+    `<span class="bz-xiong" style="padding:0 4px">四凶</span> · 盘面${ST.up==="S"?"上南下北":"上北下南"}`;
 }
 
 /* ═══════ 渲染 ═══════ */
@@ -422,7 +455,8 @@ function render(){
              :`<span class="t-brass">替卦（起星）</span> · 兼 ${P.off>0?"+":""}${P.off.toFixed(1)}°`)+
     `<br>山星 <b class="num">${P.se}</b> 入中·${P.sy==="阳"?"顺":"逆"}飞　向星 <b class="num">${P.xe}</b> 入中·${P.xy==="阳"?"顺":"逆"}飞`;
 
-  drawCompass(P);drawGrid(P,Z);
+  const zhai=P.S[1], BZ=bazhai(zhai);
+  drawCompass(P);drawGrid(P,Z,BZ);
 
   $("ge").textContent=P.ge;
   $("ge").className="ge "+(P.ge==="旺山旺向"?"t-jade":(P.ge==="上山下水"?"t-cin":""));
@@ -448,6 +482,18 @@ function render(){
        <div class="big serif"><span class="num">${K.f}</span> ${GUA[K.f][0]}${GUA[K.f][1]}</div>
        <div class="meta">${GUA[K.f][2]}命</div></div>`;
 
+  // 八宅面板：宅卦 + 四吉四凶 + 命卦匹配
+  const zEW=isEast(zhai)?"东四宅":"西四宅";
+  const mOK=isEast(zhai)===isEast(K.m), fOK=isEast(zhai)===isEast(K.f);
+  const dirOf=n=>{const g=Object.keys(BZ).find(k=>BZ[k]===n);return PG[g][1];};
+  $("bazhai").innerHTML=
+    `<div class="kv"><span>宅卦</span><b class="serif">${PG[zhai][0]}宅（坐${PG[zhai][1]}）· ${zEW}</b></div>`+
+    JI4.map(n=>`<div class="kv"><span class="s-wang">${n}</span><b>${dirOf(n)}　<span style="font-weight:400;color:var(--ink-3)">${YMEAN[n]}</span></b></div>`).join("")+
+    XIONG4.map(n=>`<div class="kv"><span class="s-sha">${n}</span><b>${dirOf(n)}　<span style="font-weight:400;color:var(--ink-3)">${YMEAN[n]}</span></b></div>`).join("")+
+    `<div style="margin-top:8px;font-size:11.5px;color:var(--ink-3)">${by} 年生者与本宅：</div>`+
+    `<span class="match" style="color:var(--${mOK?"jade":"cinnabar"})">男命 ${GUA[K.m][0]}（${GUA[K.m][2]}）${mOK?"相配":"不配"}</span> `+
+    `<span class="match" style="color:var(--${fOK?"jade":"cinnabar"})">女命 ${GUA[K.f][0]}（${GUA[K.f][2]}）${fOK?"相配":"不配"}</span>`;
+
   // 宫位提要
   const notes=[];
   const W=ST.yun, sheng=W%9+1;
@@ -466,7 +512,22 @@ function render(){
     if(yp[k]===5)notes.push(`<span class="s-sha">流年五黄</span>　${Z.P.Y}年五黄入${PG[k][0]}宫（${PG[k][1]}），该方今年忌动土修造。`);
     if(yp[k]===2)notes.push(`<span class="s-sha">流年二黑</span>　${Z.P.Y}年二黑入${PG[k][0]}宫（${PG[k][1]}），该方注意健康。`);
   });
-  $("notes").innerHTML=notes.map(t=>`<li>${t}</li>`).join("")||"<li>本盘无显著吉凶偏向。</li>";
+  // 玄空 × 八宅 交叉：两派一致处最可信，冲突处需人工取舍
+  const agree=[],conflict=[];
+  Object.keys(PG).map(Number).forEach(k=>{
+    if(!BZ||!BZ[k])return;
+    const s=P.sp[k],x=P.xp[k],n=PG[k][0]+"宫（"+PG[k][1]+"）",b=BZ[k];
+    const xkJi=(x===W||s===W||x===sheng), xkXiong=(s===5||x===5||s===2||x===2);
+    const bzJi=JI4.includes(b);
+    if(xkJi&&bzJi)  agree.push(`<span class="s-wang">${n}</span>　玄空得令 + 八宅${b} —— 两派同吉，本宅最值得用的方位。`);
+    if(xkXiong&&!bzJi)agree.push(`<span class="s-sha">${n}</span>　玄空凶星 + 八宅${b} —— 两派同凶，优先避开或化解。`);
+    if(xkJi&&!bzJi) conflict.push(`${n} 玄空吉、八宅${b}凶`);
+    if(xkXiong&&bzJi)conflict.push(`${n} 玄空凶、八宅${b}吉`);
+  });
+  const all=notes.concat(agree);
+  if(conflict.length)all.push(`<span class="t-brass">两派分歧</span>　${conflict.join("；")}。玄空重时运、八宅重宅命，`+
+    `分歧处本工具不替你裁决 —— 传统上以玄空当运星为主、八宅为辅，但需结合峦头实勘。`);
+  $("notes").innerHTML=all.map(t=>`<li>${t}</li>`).join("")||"<li>本盘无显著吉凶偏向。</li>";
 }
 
 /* ═══════ 绑定 ═══════ */

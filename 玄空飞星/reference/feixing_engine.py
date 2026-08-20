@@ -197,3 +197,28 @@ def pan_ti(yun, facing_deg):
 # mountainOf 的模块内别名（供上面调用）
 def mountainOf_py(d):
     return mountain_of(d)
+
+
+# ══════════ 八宅明镜（游年变爻法）══════════
+# 三爻 (初,二,三)=(下,中,上)，1=阳 0=阴
+YAO = {1:(0,1,0), 2:(0,0,0), 3:(1,0,0), 4:(0,1,1),
+       6:(1,1,1), 7:(1,1,0), 8:(0,0,1), 9:(1,0,1)}
+BY_YAO = {v:k for k,v in YAO.items()}
+YSEQ = [(2,"生气"),(1,"五鬼"),(0,"延年"),(1,"六煞"),
+        (2,"祸害"),(1,"天医"),(0,"绝命"),(1,"伏位")]
+JI4    = ["生气","延年","天医","伏位"]
+XIONG4 = ["祸害","六煞","五鬼","绝命"]
+EAST4  = {1,3,4,9}
+
+def bazhai(zhai_palace):
+    """宅卦洛书数 → {宫位: 游年名}。中宫(5)无宅卦，返回 None。"""
+    if zhai_palace not in YAO:
+        return None
+    y = list(YAO[zhai_palace]); out = {}
+    for i, name in YSEQ:
+        y[i] ^= 1
+        out[BY_YAO[tuple(y)]] = name
+    return out
+
+def is_east(palace):
+    return palace in EAST4
