@@ -108,7 +108,8 @@ svg.compass:active{cursor:grabbing}
 @media(max-width:820px){.planwrap{grid-template-columns:1fr}}
 svg.plan{width:100%;max-width:400px;height:auto;display:block;margin:0 auto;
   background:var(--panel-2);border:1px solid var(--edge);border-radius:2px;touch-action:none}
-svg.plan .vtx{fill:var(--cinnabar);cursor:grab}
+svg.plan .vtx{fill:var(--cinnabar);cursor:grab;pointer-events:none}
+svg.plan .vtxhit{fill:transparent;cursor:grab}
 svg.plan .vtx:hover{r:7}
 .covrow{display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0}
 .covrow+.covrow{border-top:1px dotted var(--edge)}
@@ -737,7 +738,7 @@ function bindCompass(){
     const x=(p.clientX-r.left)/r.width*320-160, y=(p.clientY-r.top)/r.height*320-160;
     let a=norm(Math.atan2(y,x)*180/Math.PI+90);
     ST.deg=Math.round(a*10)/10;$("deg").value=ST.deg;$("degr").value=ST.deg;render()};
-  s.addEventListener("pointerdown",e=>{drag=true;s.setPointerCapture(e.pointerId);set(e)});
+  s.addEventListener("pointerdown",e=>{drag=true;try{s.setPointerCapture(e.pointerId)}catch(_){}set(e)});
   s.addEventListener("pointermove",e=>{if(drag)set(e)});
   s.addEventListener("pointerup",e=>{drag=false});
 }
@@ -804,7 +805,10 @@ function drawPlanRadial(P,BZ,A){
   const lj=el("text",{x:c[0]+7,y:c[1]-6,"font-size":9,fill:"var(--brass)"});
   lj.textContent="立极(形心)";s.appendChild(lj);
   const n=el("text",{x:8,y:14,"font-size":10,fill:"var(--ink-3)"});n.textContent="↑ 北";s.appendChild(n);
-  ST.plan.forEach((pt,i)=>s.appendChild(el("circle",{cx:pt[0],cy:pt[1],r:5.5,class:"vtx","data-i":i})));
+  ST.plan.forEach((pt,i)=>{
+    s.appendChild(el("circle",{cx:pt[0],cy:pt[1],r:22,class:"vtxhit","data-i":i}));
+    s.appendChild(el("circle",{cx:pt[0],cy:pt[1],r:5.5,class:"vtx","data-i":i}));
+  });
 }
 function planBackdrop(s){
   if(!BACKDROP||!BACKDROP.url||!ST.showImg)return;
@@ -853,8 +857,9 @@ function drawPlan(P,BZ,A){
   n.textContent="↑ 北"; s.appendChild(n);
   // 顶点把手
   ST.plan.forEach((pt,i)=>{
-    const h=el("circle",{cx:pt[0],cy:pt[1],r:5.5,class:"vtx","data-i":i});
-    s.appendChild(h);
+    // 先放一个透明的大命中区（触屏手指目标），再画可见的小红点
+    s.appendChild(el("circle",{cx:pt[0],cy:pt[1],r:22,class:"vtxhit","data-i":i}));
+    s.appendChild(el("circle",{cx:pt[0],cy:pt[1],r:5.5,class:"vtx","data-i":i}));
   });
 }
 function bindPlan(){
@@ -864,7 +869,7 @@ function bindPlan(){
   s.addEventListener("pointerdown",e=>{
     const i=e.target.getAttribute&&e.target.getAttribute("data-i");
     if(i===null||i===undefined)return;
-    dragI=+i; s.setPointerCapture(e.pointerId); e.preventDefault();
+    dragI=+i; try{s.setPointerCapture(e.pointerId)}catch(_){} e.preventDefault();
   });
   s.addEventListener("pointermove",e=>{
     if(dragI<0)return;

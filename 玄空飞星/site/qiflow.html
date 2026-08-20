@@ -90,7 +90,7 @@ header .sub{display:none}
        style="font-size:11.5px;color:var(--brass)">→ 到排盘页编辑户型轮廓</a></p>
 
     <h2 style="margin-top:20px">炁口与流场</h2>
-    <p class="hint">拖动画面旋转视角，滚轮缩放</p>
+    <p class="hint">拖动旋转视角 · 滚轮或双指缩放</p>
 
     <label for="ent">炁口方位 <b id="entV">北</b></label>
     <select id="ent">
@@ -496,14 +496,38 @@ function renderCross(){
 
 /* ═══ 交互 ═══ */
 let drag=null;
-cv.addEventListener("pointerdown",e=>{drag={x:e.clientX,y:e.clientY};cv.setPointerCapture(e.pointerId);});
+const PTRS=new Map();                    // 多指跟踪，用于双指缩放
+let pinch0=0, dist0=0;
+const pinchDist=()=>{
+  const a=[...PTRS.values()];
+  return a.length<2?0:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
+};
+cv.addEventListener("pointerdown",e=>{
+  PTRS.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  try{cv.setPointerCapture(e.pointerId)}catch(_){}
+  if(PTRS.size===2){pinch0=pinchDist();dist0=ST.dist;drag=null;}
+  else if(PTRS.size===1)drag={x:e.clientX,y:e.clientY};
+});
 cv.addEventListener("pointermove",e=>{
-  if(!drag)return;
+  if(PTRS.has(e.pointerId))PTRS.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(PTRS.size>=2){                      // 双指：缩放
+    const d=pinchDist();
+    if(pinch0>0&&d>0)ST.dist=Math.max(220,Math.min(1100,dist0*pinch0/d));
+    return;
+  }
+  if(!drag)return;                       // 单指：旋转
   ST.yaw+=(e.clientX-drag.x)*0.006;
   ST.pitch=Math.max(0.12,Math.min(1.45,ST.pitch+(e.clientY-drag.y)*0.005));
   drag={x:e.clientX,y:e.clientY};
 });
-cv.addEventListener("pointerup",()=>drag=null);
+function endPtr(e){
+  PTRS.delete(e.pointerId);
+  if(PTRS.size<2)pinch0=0;
+  if(PTRS.size===0)drag=null;
+  else{const a=[...PTRS.values()][0];drag={x:a.x,y:a.y};}
+}
+cv.addEventListener("pointerup",endPtr);
+cv.addEventListener("pointercancel",endPtr);
 cv.addEventListener("wheel",e=>{e.preventDefault();
   ST.dist=Math.max(220,Math.min(1100,ST.dist+e.deltaY*0.6));},{passive:false});
 
