@@ -332,3 +332,40 @@ def radial_coverage(poly):
         b = abs(signed_area(sector_clip(bb,   c, th)))
         cov[g] = a/b if b else 0.0
     return cov
+
+
+# ══════════ 八字：十神 / 藏干 / 五行 ══════════
+GAN10 = "甲乙丙丁戊己庚辛壬癸"
+ZHI12 = "子丑寅卯辰巳午未申酉戌亥"
+GAN_WX = [0,0,1,1,2,2,3,3,4,4]      # 0木 1火 2土 3金 4水
+GAN_YY = [1,0,1,0,1,0,1,0,1,0]      # 1阳 0阴
+WUXING = "木火土金水"
+CANGGAN = {"子":"癸","丑":"己癸辛","寅":"甲丙戊","卯":"乙","辰":"戊乙癸","巳":"丙庚戊",
+           "午":"丁己","未":"己丁乙","申":"庚壬戊","酉":"辛","戌":"戊辛丁","亥":"壬甲"}
+# 藏干权重：本气 / 中气 / 余气
+CANG_W = [1.0, 0.5, 0.3]
+
+def shishen(day_gan, other_gan):
+    """十神：以日主为我，判断另一天干的关系"""
+    d = GAN10.index(day_gan); o = GAN10.index(other_gan)
+    dw, ow = GAN_WX[d], GAN_WX[o]
+    same = GAN_YY[d] == GAN_YY[o]
+    if dw == ow:               return "比肩" if same else "劫财"
+    if (dw+1) % 5 == ow:       return "食神" if same else "伤官"   # 我生
+    if (dw+2) % 5 == ow:       return "偏财" if same else "正财"   # 我克
+    if (ow+2) % 5 == dw:       return "七杀" if same else "正官"   # 克我
+    if (ow+1) % 5 == dw:       return "偏印" if same else "正印"   # 生我
+    raise ValueError((day_gan, other_gan))
+
+def wuxing_score(pillars):
+    """pillars: [(gan,zhi)]*4 → 五行加权得分（含藏干）"""
+    c = [0.0]*5
+    for g, z in pillars:
+        c[GAN_WX[GAN10.index(g)]] += 1.0
+        for i, h in enumerate(CANGGAN[z]):
+            c[GAN_WX[GAN10.index(h)]] += CANG_W[i]
+    return c
+
+def dayun_dir(year_gan, male):
+    """大运顺逆：阳年男 / 阴年女 → 顺；阴年男 / 阳年女 → 逆"""
+    return (GAN_YY[GAN10.index(year_gan)] == 1) == bool(male)

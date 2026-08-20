@@ -176,6 +176,36 @@ check("RD.两法同指西南",
       min(plan_coverage(LSHAPE), key=lambda k: plan_coverage(LSHAPE)[k]),
       min(rc, key=lambda k: rc[k]))
 
-print(f"[含放射] {TOTAL-len(FAILS)}/{TOTAL} passed")
+print(f"[含放射] {TOTAL-len(FAILS)}/{TOTAL} checks so far")
+
+# ── 八字：十神 / 藏干 / 五行 / 大运顺逆 ──
+from feixing_engine import (shishen, wuxing_score, dayun_dir,
+                            GAN10, ZHI12, CANGGAN, GAN_WX)
+# 结构自洽：任一日主对十天干恰好给出十神各一
+for d in GAN10:
+    got=[shishen(d,o) for o in GAN10]
+    check(f"BZ.{d}.十神齐全", sorted(set(got)), sorted(got))
+    check(f"BZ.{d}.十神数", len(got), 10)
+# 已知案例（日主癸 · 阴水）
+for o,exp in [("丙","正财"),("戊","正官"),("壬","劫财"),("癸","比肩"),("乙","食神"),
+              ("甲","伤官"),("辛","偏印"),("庚","正印"),("丁","偏财"),("己","七杀")]:
+    check(f"BZ.癸对{o}", shishen("癸",o), exp)
+# 藏干合法性与本气一致性
+ZHI_WX={"子":4,"丑":2,"寅":0,"卯":0,"辰":2,"巳":1,"午":1,"未":2,"申":3,"酉":3,"戌":2,"亥":4}
+for z in ZHI12:
+    check(f"BZ.藏干合法.{z}", all(h in GAN10 for h in CANGGAN[z]), True)
+    check(f"BZ.本气五行.{z}", GAN_WX[GAN10.index(CANGGAN[z][0])], ZHI_WX[z])
+# 五行得分：总量守恒（4天干 + 各支藏干权重和）
+bz=[("丙","午"),("丙","申"),("癸","亥"),("戊","午")]
+tot=sum(wuxing_score(bz))
+exp=4.0+sum(sum([1.0,0.5,0.3][:len(CANGGAN[z])]) for _,z in bz)
+check("BZ.五行总量", round(tot,6), round(exp,6))
+# 大运顺逆四组合
+check("BZ.阳年男顺", dayun_dir("庚",True),  True)
+check("BZ.阳年女逆", dayun_dir("庚",False), False)
+check("BZ.阴年男逆", dayun_dir("辛",True),  False)
+check("BZ.阴年女顺", dayun_dir("辛",False), True)
+
+print(f"[含八字] {TOTAL-len(FAILS)}/{TOTAL} passed")
 for f in FAILS: print("  FAIL",f)
 sys.exit(1 if FAILS else 0)
