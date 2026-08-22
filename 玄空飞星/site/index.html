@@ -1,7 +1,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>玄空飞星工作台</title>
-<meta name="description" content="可验证的东方术数工具：玄空飞星、三维炁流、立极定向、八字命书、合盘与六爻纳甲。算法公开，五套基准共 3936 条一致性测试，五个独立实现交叉校验，天文项与卦序另比对传世表与公开年历。">
+<meta name="description" content="可验证的东方术数工具：玄空飞星、三维炁流、立极定向、八字命书、合盘与六爻纳甲。算法公开，六套基准共 4243 条一致性测试，五个独立实现交叉校验，天文项与卦序另比对传世表与公开年历。">
 <style>
 :root{
   --ground:#E7E1D2; --panel:#F3EEE2; --panel-2:#EAE4D5; --edge:#CFC5AC;
@@ -160,7 +160,10 @@ code{background:var(--panel-2);padding:1px 5px;border-radius:2px;font-size:.9em}
     <tr><td>各宫炁强度 网页 vs Python</td><td>5 组户型</td><td class="n ok">差 &lt;5e-7</td></tr>
     <tr><td>紫白三元起例 · 流年月日时</td><td>传世口诀 + 结构推导</td><td class="n ok">934 / 934</td></tr>
     <tr><td>紫白 网页 vs Python</td><td>1188 组</td><td class="n ok">逐字节一致</td></tr>
-    <tr><td colspan="2"><b>五套测试总计</b></td><td class="n ok">3936 / 3936</td></tr>
+    <tr><td>户型识别 · 各步不变量</td><td>数学定义</td><td class="n ok">305 / 305</td></tr>
+    <tr><td>户型识别 网页 vs Python</td><td>120 行</td><td class="n ok">逐字节一致</td></tr>
+    <tr><td>测试自身 · 变异自检</td><td>注入 34 个已知缺陷</td><td class="n ok">33 / 33 抓到 · 1 等价</td></tr>
+    <tr><td colspan="2"><b>六套测试总计</b></td><td class="n ok">4243 / 4243</td></tr>
   </table></div>
   <div class="claim">
     <b>大量「要背的表」其实是算术。</b>

@@ -76,6 +76,13 @@ check("绕墙.绕行长于直线", dw2[far] > octile(Go-1, 0), True)
 
 # ══ 三、宫格划分 ══════════════════════════════════════════
 check("宫格.G须被3整除", G % 3, 0)
+# 那条 assert 必须真的会拦人：G 不整除时末行末列会被静默丢弃。
+# 变异测试发现，仅断言 G%3==0 抓不住「把 assert 删掉」—— 因为现行 G=72 本就整除。
+try:
+    palace_stats(bytearray([1]*(70*70)), [0.0]*(70*70), 70)
+    check("宫格.非整除须报错", "未报错", "AssertionError")
+except AssertionError:
+    check("宫格.非整除须报错", "AssertionError", "AssertionError")
 check("宫格.九宫齐全", sorted(g for r in PALACE_CELL for g in r), list(range(1,10)))
 check("宫格.洛书上北", PALACE_CELL[0][1], 1)      # 坎1 在北
 check("宫格.洛书离南", PALACE_CELL[2][1], 9)      # 离9 在南
