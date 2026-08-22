@@ -26,6 +26,9 @@ body{margin:0;background:var(--ground);color:var(--ink);
 .serif{font-family:"Songti SC","STSong","Source Han Serif SC",SimSun,serif}
 a{color:var(--brass)}
 
+.skip{position:absolute;left:-9999px;top:0;z-index:20;background:var(--brass);color:var(--lacquer);
+  padding:8px 14px;font-size:12px;letter-spacing:.1em;text-decoration:none}
+.skip:focus{left:8px;top:8px}
 header{background:var(--lacquer);color:var(--lacquer-ink);border-bottom:2px solid var(--brass);
   position:relative;z-index:5}
 .bar{max-width:1100px;margin:0 auto;padding:13px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
@@ -59,6 +62,14 @@ nav.site a[aria-current="page"]{color:var(--lacquer);background:var(--brass);fon
 .node:hover .orb,.node:focus-visible .orb{border-color:var(--brass);
   box-shadow:0 0 0 8px rgba(201,162,74,.11), 0 0 30px -4px rgba(201,162,74,.5)}
 .node:hover .cap{color:#D8BC77}
+.node-float{display:block;animation:float 7s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@media(prefers-reduced-motion:reduce){.node-float{animation:none}}
+.badge{position:absolute;left:50%;transform:translateX(-50%);top:-9px;
+  font-size:8.5px;letter-spacing:.14em;padding:2px 7px;border-radius:9px;white-space:nowrap;
+  background:rgba(61,106,87,.9);color:#DCEFE3;border:1px solid rgba(107,161,137,.5)}
+.badge.no{background:rgba(40,36,29,.9);color:#7E7562;border-color:rgba(126,117,98,.4)}
+.node .orb{position:relative}
 .node.soon{cursor:default;opacity:.45}
 .node.soon:hover{transform:translate(-50%,-50%)}
 .node.soon:hover .orb{border-color:rgba(201,162,74,.42);
@@ -98,6 +109,45 @@ td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
   border-radius:3px;padding:16px 20px}
 .bounds ul{margin:8px 0 0;padding-left:20px}
 .bounds li{margin:5px 0;font-size:13.5px;color:var(--ink-2)}
+
+/* ═══ 主张段 ═══ */
+.hero{padding:8px 0 4px}
+.hero h1{font-family:"Songti SC","STSong",SimSun,serif;font-size:clamp(26px,3.6vw,40px);
+  line-height:1.45;letter-spacing:.03em;margin:0 0 16px;font-weight:600}
+.lede{font-size:15px;color:var(--ink-2);line-height:1.9;margin:0 0 24px}
+.heroband{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--edge);
+  border:1px solid var(--edge);border-radius:3px;overflow:hidden}
+.heroband>div{background:var(--panel);padding:14px 10px;text-align:center}
+.heroband b{display:block;font-family:"Songti SC","STSong",SimSun,serif;font-size:24px;
+  color:var(--brass);font-variant-numeric:tabular-nums;line-height:1.2}
+.heroband span{display:block;font-size:11px;color:var(--ink-3);margin-top:3px;letter-spacing:.06em}
+@media(max-width:640px){.heroband{grid-template-columns:repeat(2,1fr)}}
+
+/* ═══ 三条路径 ═══ */
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{display:flex;flex-direction:column;gap:7px;padding:18px 18px 16px;
+  background:var(--panel);border:1px solid var(--edge);border-radius:3px;
+  text-decoration:none;color:inherit;transition:border-color .2s,transform .2s,box-shadow .2s}
+.card:hover{border-color:var(--brass);transform:translateY(-2px);
+  box-shadow:0 8px 22px -14px rgba(0,0,0,.5)}
+.card .cg{font-size:30px;color:var(--brass);line-height:1}
+.card b{font-size:15px;letter-spacing:.06em}
+.card .cd{font-size:12.5px;color:var(--ink-2);line-height:1.7}
+.card .cm{font-size:11px;color:var(--jade);letter-spacing:.04em;margin-top:auto;padding-top:6px;
+  border-top:1px dotted var(--edge)}
+@media(max-width:820px){.cards{grid-template-columns:1fr}}
+
+/* ═══ 全部工具 ═══ */
+.groups{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.grp h3{font-family:"Songti SC","STSong",SimSun,serif;font-size:13px;letter-spacing:.18em;
+  color:var(--ink-3);margin:0 0 10px;padding-bottom:6px;border-bottom:1px solid var(--edge)}
+.grp a,.grp .soon{display:block;padding:9px 10px;border-radius:3px;text-decoration:none;
+  color:inherit;transition:background .18s}
+.grp a:hover{background:var(--panel-2)}
+.grp b{display:block;font-size:13.5px;letter-spacing:.05em}
+.grp span{display:block;font-size:11.5px;color:var(--ink-3);margin-top:1px}
+.grp .soon{opacity:.45;cursor:default}
+@media(max-width:820px){.groups{grid-template-columns:1fr}}
 footer{border-top:1px solid var(--edge);padding-top:18px;font-size:12px;color:var(--ink-3)}
 code{background:var(--panel-2);padding:1px 5px;border-radius:2px;font-size:.9em}
 @media(prefers-reduced-motion:reduce){.node{transition:none}}
@@ -110,11 +160,45 @@ code{background:var(--panel-2);padding:1px 5px;border-radius:2px;font-size:.9em}
   .tip{position:static;transform:none;opacity:1;margin-top:20px;width:auto}
   .skyhint{position:static;transform:none;display:block;text-align:center;margin-bottom:18px}
 }
+/*==NAV-CSS-BEGIN==*/
+/* 顶栏：← 门户 | 模块名 | 副标题 …… 导航（右对齐），与竞品同构。
+   页面原有的 .name（「飞星盘」等）与 modname 重复，故一并隐去。 */
+header .name{display:none}
+.topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:1;min-width:0}
+.topbar .back{font-size:11.5px;letter-spacing:.08em;color:#9A8F78;text-decoration:none;
+  padding:3px 9px;border:1px solid rgba(154,143,120,.35);border-radius:2px;white-space:nowrap}
+.topbar .back:hover{color:var(--brass);border-color:var(--brass)}
+.topbar .modname{font-family:"Songti SC","STSong",SimSun,serif;font-size:16px;letter-spacing:.16em;
+  color:var(--lacquer);background:var(--brass);padding:3px 11px;border-radius:2px;white-space:nowrap}
+.topbar .modsub{font-size:11px;color:#7E7562;letter-spacing:.06em;white-space:nowrap}
+nav.site{display:flex;gap:2px;margin-left:auto;align-items:center;flex-wrap:wrap}
+nav.site a{font-size:11.5px;letter-spacing:.1em;color:#9A8F78;text-decoration:none;
+  padding:4px 10px;border-radius:2px;white-space:nowrap}
+nav.site a:hover{color:var(--brass)}
+nav.site a[aria-current="page"]{color:var(--lacquer);background:var(--brass);font-weight:600}
+header .sub{display:none}
+/* 长文页：顶栏单独成行，与下方标题块拉开 */
+header .in{clear:both}
+.topbar:has(+ .in){margin-bottom:14px;padding-bottom:12px;
+  border-bottom:1px solid rgba(154,143,120,.18)}
+
+/* 媒体块必须排在基础规则之后 —— 同特异度下后者胜出。
+   先前把它插在 nav.site 基础规则之前，flex-wrap:nowrap 从未生效，
+   窄屏 8 项导航仍折行，反把顶栏撑到 178px。 */
+@media(max-width:760px){
+  .topbar .modsub{display:none}
+  .topbar{flex-wrap:nowrap;overflow:hidden;gap:8px}
+  nav.site{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;mask-image:linear-gradient(90deg,#000 86%,transparent)}
+  nav.site::-webkit-scrollbar{display:none}
+}
+/*==NAV-CSS-END==*/
 </style>
 
+<a class="skip" href="#main">跳到主要内容</a>
 <header><div class="bar">
   <span class="mark">玄空</span>
-  <nav class="site"><a href="./" aria-current="page">门户</a><a href="paipan.html">排盘</a><a href="qiflow.html">炁流场</a><a href="waihuan.html">立极尺</a><a href="bazi.html">命书</a><a href="hepan.html">合盘</a><a href="liuyao.html">六爻</a><a href="research.html">竞品拆解</a></nav>
+  <span class="topbar"><nav class="site"><a href="./" aria-current="page">门户</a><a href="paipan.html">排盘</a><a href="qiflow.html">炁流场</a><a href="waihuan.html">立极尺</a><a href="bazi.html">命书</a><a href="hepan.html">合盘</a><a href="liuyao.html">六爻</a><a href="research.html">竞品拆解</a></nav></span>
 </div></header>
 
 <div class="sky">
@@ -129,7 +213,73 @@ code{background:var(--panel-2);padding:1px 5px;border-radius:2px;font-size:.9em}
   <div class="tip" id="tip">算得对的东方术数 —— 算法公开、基准可复算、边界写在明处。</div>
 </div>
 
-<main>
+<main id="main">
+
+<section class="hero">
+  <h1>把术数当工程做：<br>算得对，才谈得上准。</h1>
+  <p class="lede">同一个坐向，不同工具给出不同的盘 —— 这不该发生。<br>
+    这里的每一条算法都公开推导、对外部权威取证、可在本地复算。<br>
+    <b>算不了的，也写在明处。</b></p>
+  <div class="heroband">
+    <div><b>4243</b><span>一致性测试</span></div>
+    <div><b>33/33</b><span>变异自检抓到</span></div>
+    <div><b>5</b><span>独立实现交叉校验</span></div>
+    <div><b>0</b><span>依赖 · 单文件可离线</span></div>
+  </div>
+</section>
+
+<section>
+  <h2>三条路径</h2>
+  <p class="sub">空间、命时、卜筮 —— 同一套历法与干支底座，三个入口。</p>
+  <div class="cards">
+    <a class="card" href="paipan.html">
+      <span class="cg serif">盘</span>
+      <b>玄空飞星排盘</b>
+      <span class="cd">拖罗盘或手机实测定坐向，排山星向星（下卦＋替卦），叠八宅四吉四凶，
+        上传户型图算缺角，右栏随日期联动月相潮汐与日出日落。</span>
+      <span class="cm">216 组坐向盘 · 与四个外部实现比对</span>
+    </a>
+    <a class="card" href="bazi.html">
+      <span class="cg serif">命</span>
+      <b>八字命书</b>
+      <span class="cd">四柱、十神、藏干、五行加权、十步大运与流年细盘，
+        含纳音神煞旬空与真太阳时校正（39 城经度差＋均时差）。</span>
+      <span class="cm">节气用 VSOP87D＋ΔT · 与公开历书逐分对上</span>
+    </a>
+    <a class="card" href="liuyao.html">
+      <span class="cg serif">爻</span>
+      <b>六爻纳甲</b>
+      <span class="cd">三枚铜钱摇卦，装八宫世应、纳甲干支、六亲六神与伏神。
+        卦序与纳甲全由规则推出，不抄传世表。</span>
+      <span class="cm">与京房八宫卦序逐格比对 · 1007 项全通过</span>
+    </a>
+  </div>
+</section>
+
+<section>
+  <h2>全部工具</h2>
+  <p class="sub">按所观之物分三类。灰色者为尚未开始，不拿「敬请期待」充数。</p>
+  <div class="groups">
+    <div class="grp">
+      <h3>空间</h3>
+      <a href="paipan.html"><b>排盘</b><span>玄空飞星 · 八宅 · 户型缺角</span></a>
+      <a href="qiflow.html"><b>炁流场</b><span>三维测地可达性 · 各宫炁强度</span></a>
+      <a href="waihuan.html"><b>立极尺</b><span>地图量朝向轴 · 直读二十四山</span></a>
+    </div>
+    <div class="grp">
+      <h3>命时</h3>
+      <a href="bazi.html"><b>命书</b><span>四柱 · 十神 · 大运流年 · 真太阳时</span></a>
+      <a href="hepan.html"><b>合盘</b><span>两造刑冲合害 · 只列关系不下结论</span></a>
+      <span class="soon"><b>紫微斗数</b><span>尚未开始</span></span>
+    </div>
+    <div class="grp">
+      <h3>卜筮与其他</h3>
+      <a href="liuyao.html"><b>六爻纳甲</b><span>铜钱起卦 · 八宫世应 · 六亲六神</span></a>
+      <a href="research.html"><b>竞品拆解</b><span>技术栈与术数引擎的对照分析</span></a>
+      <span class="soon"><b>奇门遁甲</b><span>尚未开始</span></span>
+    </div>
+  </div>
+</section>
 
 <section>
   <h2>凭什么说算得对</h2>
@@ -257,8 +407,10 @@ NODES.forEach(nd=>{
   el.className="node"+(nd.href?"":" soon");
   el.style.left=nd.x+"%"; el.style.top=nd.y+"%";
   if(nd.href)el.tabIndex=0;
-  el.innerHTML='<span class="orb"><span class="glyph">'+nd.g+'</span></span>'+
-    '<span class="cap">'+nd.n+'<span class="st">'+nd.s+'</span></span>';
+  const bd=nd.href?'<span class="badge">已开放</span>':'<span class="badge no">尚未开始</span>';
+  el.innerHTML='<span class="node-float" style="animation-delay:'+(nd.x*37%5000)+'ms">'+
+    '<span class="orb">'+bd+'<span class="glyph">'+nd.g+'</span></span>'+
+    '<span class="cap">'+nd.n+'<span class="st">'+nd.s+'</span></span></span>';
   const show=()=>{tip.innerHTML=nd.d;tip.classList.add("on");};
   const hide=()=>{tip.innerHTML=DEFAULT_TIP;};
   el.addEventListener("mouseenter",show);
@@ -292,21 +444,75 @@ function resize(){
   cx.setTransform(dpr,0,0,dpr,0,0);
   const n=Math.round(W*H/9000);
   pts=[];
-  for(let i=0;i<n;i++)pts.push({
-    x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.25+.25,
-    a:Math.random()*.5+.12,tw:Math.random()*.9+.25,ph:Math.random()*6.283,
-    vx:(Math.random()-.5)*.045,vy:(Math.random()-.5)*.045});
+  // 少量星点取五行色：木青、火赤、土黄、金白、水蓝 —— 其余为素色
+  for(let i=0;i<n;i++){
+    const wx=Math.random()<0.09?WUXING[(Math.random()*5)|0]:null;
+    pts.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.25+.25,
+      a:Math.random()*.5+.12,tw:Math.random()*.9+.25,ph:Math.random()*6.283,
+      vx:(Math.random()-.5)*.045,vy:(Math.random()-.5)*.045,c:wx});
+  }
+  buildClusters();
+}
+/* 五行色：木青 火赤 土黄 金白 水玄（此处取靛，纯黑在夜空上不可见） */
+const WUXING=["124,176,140","201,90,70","201,162,74","214,208,190","110,150,196"];
+/* 微星团：几处三五颗一组、以细线相连的小图案，给星野以纵深 */
+let CLUSTERS=[];
+function buildClusters(){
+  CLUSTERS=[];
+  const k=Math.max(3,Math.round(W*H/95000));
+  for(let i=0;i<k;i++){
+    const cx0=Math.random()*W, cy0=Math.random()*H, m=3+((Math.random()*3)|0), ps=[];
+    for(let j=0;j<m;j++)
+      ps.push([cx0+(Math.random()-.5)*46, cy0+(Math.random()-.5)*38, Math.random()*.9+.5]);
+    CLUSTERS.push(ps);
+  }
+}
+/* 五星古名 —— 用传统称谓，不用现代译名 */
+const WUXING_NAMES=[["岁星",.13,.17],["荧惑",.86,.24],["填星",.08,.72],
+                    ["太白",.93,.63],["辰星",.52,.09]];
+function drawRings(){
+  // 同心轨道环：椭圆而非正圆，避免看着像靶子
+  const ox=W*.5, oy=H*.5, R=Math.min(W,H)*.5;
+  for(let i=1;i<=4;i++){
+    cx.beginPath();
+    cx.ellipse(ox,oy,R*(0.30+i*0.22),R*(0.24+i*0.185),0,0,6.283);
+    cx.strokeStyle="rgba(201,162,74,"+(0.055-i*0.008).toFixed(3)+")";
+    cx.lineWidth=1; cx.stroke();
+  }
+}
+function drawClusters(t){
+  cx.lineWidth=.7;
+  for(const ps of CLUSTERS){
+    cx.strokeStyle="rgba(201,162,74,.055)";
+    cx.beginPath();
+    for(let i=0;i<ps.length;i++){ i?cx.lineTo(ps[i][0],ps[i][1]):cx.moveTo(ps[i][0],ps[i][1]); }
+    cx.stroke();
+    for(const q of ps){
+      const a=reduce?.30:.30*(.6+.4*Math.sin(t*.7+q[0]*.05));
+      cx.beginPath(); cx.arc(q[0],q[1],q[2],0,6.283);
+      cx.fillStyle="rgba(217,201,160,"+a.toFixed(3)+")"; cx.fill();
+    }
+  }
+}
+function drawPlanets(){
+  cx.font='9px "Songti SC","STSong",SimSun,serif';
+  cx.fillStyle="rgba(126,117,98,.42)";
+  cx.textAlign="center";
+  for(const [nm,fx,fy] of WUXING_NAMES) cx.fillText(nm,W*fx,H*fy);
 }
 function frame(ts){
   const t=ts/1000;
   cx.clearRect(0,0,W,H);
+  drawRings();
+  drawClusters(t);
+  drawPlanets();
   for(let i=0;i<pts.length;i++){
     const p=pts[i];
     if(!reduce){p.x+=p.vx;p.y+=p.vy;
       if(p.x<0)p.x+=W; if(p.x>W)p.x-=W; if(p.y<0)p.y+=H; if(p.y>H)p.y-=H;}
     const a=reduce?p.a:p.a*(.62+.38*Math.sin(t*p.tw+p.ph));
     cx.beginPath();cx.arc(p.x,p.y,p.r,0,6.283);
-    cx.fillStyle="rgba(217,201,160,"+a.toFixed(3)+")";cx.fill();
+    cx.fillStyle="rgba("+(p.c||"217,201,160")+","+a.toFixed(3)+")";cx.fill();
   }
   requestAnimationFrame(frame);
 }

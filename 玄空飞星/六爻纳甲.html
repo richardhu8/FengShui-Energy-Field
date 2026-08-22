@@ -124,10 +124,43 @@ footer{max-width:1100px;margin:0 auto;padding:14px 20px 26px;font-size:11px;colo
   .pair{grid-template-columns:1fr 1fr}
   footer{flex:none;padding:8px 20px;border-top:1px solid var(--edge)}
 }
+/*==NAV-CSS-BEGIN==*/
+/* 顶栏：← 门户 | 模块名 | 副标题 …… 导航（右对齐），与竞品同构。
+   页面原有的 .name（「飞星盘」等）与 modname 重复，故一并隐去。 */
+header .name{display:none}
+.topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:1;min-width:0}
+.topbar .back{font-size:11.5px;letter-spacing:.08em;color:#9A8F78;text-decoration:none;
+  padding:3px 9px;border:1px solid rgba(154,143,120,.35);border-radius:2px;white-space:nowrap}
+.topbar .back:hover{color:var(--brass);border-color:var(--brass)}
+.topbar .modname{font-family:"Songti SC","STSong",SimSun,serif;font-size:16px;letter-spacing:.16em;
+  color:var(--lacquer);background:var(--brass);padding:3px 11px;border-radius:2px;white-space:nowrap}
+.topbar .modsub{font-size:11px;color:#7E7562;letter-spacing:.06em;white-space:nowrap}
+nav.site{display:flex;gap:2px;margin-left:auto;align-items:center;flex-wrap:wrap}
+nav.site a{font-size:11.5px;letter-spacing:.1em;color:#9A8F78;text-decoration:none;
+  padding:4px 10px;border-radius:2px;white-space:nowrap}
+nav.site a:hover{color:var(--brass)}
+nav.site a[aria-current="page"]{color:var(--lacquer);background:var(--brass);font-weight:600}
+header .sub{display:none}
+/* 长文页：顶栏单独成行，与下方标题块拉开 */
+header .in{clear:both}
+.topbar:has(+ .in){margin-bottom:14px;padding-bottom:12px;
+  border-bottom:1px solid rgba(154,143,120,.18)}
+
+/* 媒体块必须排在基础规则之后 —— 同特异度下后者胜出。
+   先前把它插在 nav.site 基础规则之前，flex-wrap:nowrap 从未生效，
+   窄屏 8 项导航仍折行，反把顶栏撑到 178px。 */
+@media(max-width:760px){
+  .topbar .modsub{display:none}
+  .topbar{flex-wrap:nowrap;overflow:hidden;gap:8px}
+  nav.site{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;mask-image:linear-gradient(90deg,#000 86%,transparent)}
+  nav.site::-webkit-scrollbar{display:none}
+}
+/*==NAV-CSS-END==*/
 </style>
 <header>
   <span class="mark">玄空</span><span class="name">六爻纳甲</span>
-<nav class="site"><a href="site/index.html">门户</a><a href="玄空飞星排盘.html">排盘</a><a href="炁流场3D.html">炁流场</a><a href="外环境立极尺.html">立极尺</a><a href="八字命书.html">命书</a><a href="合盘.html">合盘</a><a href="六爻纳甲.html" aria-current="page">六爻</a><a href="寻炁-技术拆解.html">竞品拆解</a></nav></header>
+<span class="topbar"><a class="back" href="site/index.html">← 门户</a><span class="modname">六爻</span><span class="modsub">铜钱起卦 · 八宫世应 · 六亲六神</span><nav class="site"><a href="site/index.html">门户</a><a href="玄空飞星排盘.html">排盘</a><a href="炁流场3D.html">炁流场</a><a href="外环境立极尺.html">立极尺</a><a href="八字命书.html">命书</a><a href="合盘.html">合盘</a><a href="六爻纳甲.html" aria-current="page">六爻</a><a href="寻炁-技术拆解.html">竞品拆解</a></nav></span></header>
 
 <main>
   <div class="card">
